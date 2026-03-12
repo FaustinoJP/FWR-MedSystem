@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { AppointmentStatus, InvoiceStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -11,17 +10,47 @@ export class DashboardService {
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    const [patientsToday, totalPatients, appointmentsToday, inTriageToday, inConsultationToday, completedToday, pendingInvoices, revenueAgg] =
-      await Promise.all([
-        this.prisma.patient.count({ where: { createdAt: { gte: start, lte: end } } }),
-        this.prisma.patient.count(),
-        this.prisma.appointment.count({ where: { appointmentDate: { gte: start, lte: end } } }),
-        this.prisma.appointment.count({ where: { appointmentDate: { gte: start, lte: end }, status: AppointmentStatus.IN_TRIAGE } }),
-        this.prisma.appointment.count({ where: { appointmentDate: { gte: start, lte: end }, status: AppointmentStatus.IN_CONSULTATION } }),
-        this.prisma.appointment.count({ where: { appointmentDate: { gte: start, lte: end }, status: AppointmentStatus.COMPLETED } }),
-        this.prisma.invoice.count({ where: { status: { in: [InvoiceStatus.DRAFT, InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID] } } }),
-        this.prisma.payment.aggregate({ _sum: { amount: true }, where: { paidAt: { gte: start, lte: end } } }),
-      ]);
+    const [
+      patientsToday,
+      totalPatients,
+      appointmentsToday,
+      inTriageToday,
+      inConsultationToday,
+      completedToday,
+      pendingInvoices,
+      revenueAgg,
+    ] = await Promise.all([
+      this.prisma.patient.count({ where: { createdAt: { gte: start, lte: end } } }),
+      this.prisma.patient.count(),
+      this.prisma.appointment.count({ where: { appointmentDate: { gte: start, lte: end } } }),
+      this.prisma.appointment.count({
+        where: {
+          appointmentDate: { gte: start, lte: end },
+          status: 'IN_TRIAGE' as any,
+        },
+      }),
+      this.prisma.appointment.count({
+        where: {
+          appointmentDate: { gte: start, lte: end },
+          status: 'IN_CONSULTATION' as any,
+        },
+      }),
+      this.prisma.appointment.count({
+        where: {
+          appointmentDate: { gte: start, lte: end },
+          status: 'COMPLETED' as any,
+        },
+      }),
+      this.prisma.invoice.count({
+        where: {
+          status: { in: ['DRAFT', 'ISSUED', 'PARTIALLY_PAID'] as any },
+        },
+      }),
+      this.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { paidAt: { gte: start, lte: end } },
+      }),
+    ]);
 
     const recentAppointments = await this.prisma.appointment.findMany({
       where: { appointmentDate: { gte: start, lte: end } },
@@ -54,7 +83,7 @@ export class DashboardService {
         { date: 'qui', label: 'Qui', total: 8 },
         { date: 'sex', label: 'Sex', total: 6 },
         { date: 'sab', label: 'Sáb', total: 2 },
-        { date: 'dom', label: 'Dom', total: 1 }
+        { date: 'dom', label: 'Dom', total: 1 },
       ],
       recentAppointments,
     };
