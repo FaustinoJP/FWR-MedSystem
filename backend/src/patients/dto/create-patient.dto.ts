@@ -1,5 +1,4 @@
-import { Gender } from '@prisma/client';
-import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class CreatePatientDto {
   @IsString()
@@ -8,8 +7,8 @@ export class CreatePatientDto {
   @IsString()
   lastName: string;
 
-  @IsEnum(Gender)
-  gender: Gender;
+  @IsIn(['MALE', 'FEMALE', 'OTHER'])
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
 
   @IsDateString()
   dateOfBirth: string;
