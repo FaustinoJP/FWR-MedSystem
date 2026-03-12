@@ -40,18 +40,3 @@ cat > package.json << 'EOF'
   }
 }
 EOF
-
-rm -rf node_modules package-lock.json
-
-cat > .env << 'EOF'
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/medsystem?schema=public"
-JWT_SECRET="faustware_super_secret"
-JWT_EXPIRES_IN="1d"
-PORT=4000
-EOF
-
-npm install
-npx prisma generate
-npx prisma migrate dev --name init
-npm run seed
-npm run start:dev
