@@ -51,33 +51,33 @@ enum PaymentMethodType {
 }
 
 model Role {
-  id          String @id @default(cuid())
-  name        String @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   description String?
   users       User[]
 }
 
 model User {
-  id           String @id @default(cuid())
+  id           String        @id @default(cuid())
   name         String
-  email        String @unique
+  email        String        @unique
   passwordHash String
   roleId       String
-  status       UserStatus @default(ACTIVE)
-  role         Role @relation(fields: [roleId], references: [id])
+  status       UserStatus    @default(ACTIVE)
+  role         Role          @relation(fields: [roleId], references: [id])
   appointments Appointment[] @relation("DoctorAppointments")
 }
 
 model Department {
-  id   String @id @default(cuid())
-  name String @unique
+  id           String        @id @default(cuid())
+  name         String        @unique
   appointments Appointment[]
   services     Service[]
 }
 
 model Patient {
-  id          String @id @default(cuid())
-  patientCode String @unique
+  id          String   @id @default(cuid())
+  patientCode String   @unique
   firstName   String
   lastName    String
   gender      Gender
@@ -91,7 +91,7 @@ model Patient {
 }
 
 model Appointment {
-  id              String @id @default(cuid())
+  id              String            @id @default(cuid())
   patientId       String
   doctorId        String
   departmentId    String
@@ -99,40 +99,41 @@ model Appointment {
   status          AppointmentStatus @default(SCHEDULED)
   reason          String?
 
-  patient    Patient @relation(fields: [patientId], references: [id])
-  doctor     User @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  patient    Patient    @relation(fields: [patientId], references: [id])
+  doctor     User       @relation("DoctorAppointments", fields: [doctorId], references: [id])
   department Department @relation(fields: [departmentId], references: [id])
 
   createdAt DateTime @default(now())
+  Invoice   Invoice?
 }
 
 model Medication {
-  id           String @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
   genericName  String?
   form         String?
   strength     String?
-  minimumStock Int @default(0)
+  minimumStock Int     @default(0)
   status       Boolean @default(true)
 }
 
 model LabTestType {
-  id       String @id @default(cuid())
-  name     String @unique
+  id       String  @id @default(cuid())
+  name     String  @unique
   category String?
 }
 
 model PaymentMethod {
-  id       String @id @default(cuid())
-  name     String @unique
+  id       String            @id @default(cuid())
+  name     String            @unique
   type     PaymentMethodType
-  isActive Boolean @default(true)
+  isActive Boolean           @default(true)
   payments Payment[]
 }
 
 model Service {
-  id           String @id @default(cuid())
-  code         String @unique
+  id           String      @id @default(cuid())
+  code         String      @unique
   name         String
   unitPrice    Float
   departmentId String?
@@ -140,18 +141,18 @@ model Service {
 }
 
 model Invoice {
-  id             String @id @default(cuid())
+  id             String        @id @default(cuid())
   patientId      String
-  appointmentId  String? @unique
-  invoiceNumber  String @unique
-  totalAmount    Float @default(0)
-  discountAmount Float @default(0)
-  paidAmount     Float @default(0)
-  balance        Float @default(0)
+  appointmentId  String?       @unique
+  invoiceNumber  String        @unique
+  totalAmount    Float         @default(0)
+  discountAmount Float         @default(0)
+  paidAmount     Float         @default(0)
+  balance        Float         @default(0)
   status         InvoiceStatus @default(DRAFT)
 
-  patient     Patient @relation(fields: [patientId], references: [id])
-  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+  patient     Patient       @relation(fields: [patientId], references: [id])
+  appointment Appointment?  @relation(fields: [appointmentId], references: [id])
   items       InvoiceItem[]
   payments    Payment[]
 }
@@ -169,13 +170,13 @@ model InvoiceItem {
 }
 
 model Payment {
-  id                  String @id @default(cuid())
-  invoiceId           String
-  paymentMethodId     String
-  amount              Float
+  id                   String   @id @default(cuid())
+  invoiceId            String
+  paymentMethodId      String
+  amount               Float
   transactionReference String?
-  paidAt              DateTime @default(now())
+  paidAt               DateTime @default(now())
 
-  invoice       Invoice @relation(fields: [invoiceId], references: [id])
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id])
   paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
 }

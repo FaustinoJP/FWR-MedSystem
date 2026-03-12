@@ -50,7 +50,7 @@ export class AppointmentsService {
   async findOne(id: string) {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
-      include: { patient: true, doctor: true, department: true, invoice: true },
+      include: { patient: true, doctor: true, department: true, Invoice: true },
     });
 
     if (!appointment) {
