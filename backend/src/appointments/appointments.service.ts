@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AppointmentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 
@@ -21,7 +20,7 @@ export class AppointmentsService {
   }
 
   findAll(filters: { search?: string; status?: string; date?: string }) {
-    const where: Prisma.AppointmentWhereInput = {};
+    const where: any = {};
 
     if (filters.search) {
       where.OR = [
@@ -29,7 +28,11 @@ export class AppointmentsService {
         { patient: { lastName: { contains: filters.search, mode: 'insensitive' } } },
       ];
     }
-    if (filters.status) where.status = filters.status as AppointmentStatus;
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
     if (filters.date) {
       where.appointmentDate = {
         gte: new Date(`${filters.date}T00:00:00.000Z`),
@@ -49,11 +52,18 @@ export class AppointmentsService {
       where: { id },
       include: { patient: true, doctor: true, department: true, invoice: true },
     });
-    if (!appointment) throw new NotFoundException('Consulta não encontrada');
+
+    if (!appointment) {
+      throw new NotFoundException('Consulta não encontrada');
+    }
+
     return appointment;
   }
 
-  updateStatus(id: string, status: AppointmentStatus) {
-    return this.prisma.appointment.update({ where: { id }, data: { status } });
+  updateStatus(id: string, status: string) {
+    return this.prisma.appointment.update({
+      where: { id },
+      data: { status: status as any },
+    });
   }
 }
