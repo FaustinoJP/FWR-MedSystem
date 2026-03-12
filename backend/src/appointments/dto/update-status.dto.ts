@@ -1,7 +1,21 @@
-import { AppointmentStatus } from '@prisma/client';
-import { IsEnum } from 'class-validator';
+import { IsIn } from 'class-validator';
 
 export class UpdateStatusDto {
-  @IsEnum(AppointmentStatus)
-  status: AppointmentStatus;
+  @IsIn([
+    'SCHEDULED',
+    'CHECKED_IN',
+    'IN_TRIAGE',
+    'IN_CONSULTATION',
+    'COMPLETED',
+    'CANCELLED',
+    'NO_SHOW',
+  ])
+  status:
+    | 'SCHEDULED'
+    | 'CHECKED_IN'
+    | 'IN_TRIAGE'
+    | 'IN_CONSULTATION'
+    | 'COMPLETED'
+    | 'CANCELLED'
+    | 'NO_SHOW';
 }
