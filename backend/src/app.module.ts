@@ -9,6 +9,8 @@ import { MedicationsModule } from './medications/medications.module';
 import { LabTestTypesModule } from './lab-test-types/lab-test-types.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { TriageModule } from './triage/triage.module';
+import { EncountersModule } from './encounters/encounters.module';
 
 @Module({
   imports: [
@@ -22,6 +24,10 @@ import { DashboardModule } from './dashboard/dashboard.module';
     LabTestTypesModule,
     PaymentMethodsModule,
     DashboardModule,
+    TriageModule,
+    EncountersModule,
   ],
 })
 export class AppModule {}
+
+

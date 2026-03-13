@@ -102,9 +102,11 @@ model Appointment {
   patient    Patient    @relation(fields: [patientId], references: [id])
   doctor     User       @relation("DoctorAppointments", fields: [doctorId], references: [id])
   department Department @relation(fields: [departmentId], references: [id])
+  Invoice    Invoice?
+  triage     Triage?
+  encounter  Encounter?
 
   createdAt DateTime @default(now())
-  Invoice   Invoice?
 }
 
 model Medication {
@@ -179,4 +181,36 @@ model Payment {
 
   invoice       Invoice       @relation(fields: [invoiceId], references: [id])
   paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+}
+
+model Triage {
+  id               String   @id @default(cuid())
+  appointmentId    String   @unique
+  weight           Float?
+  height           Float?
+  temperature      Float?
+  bloodPressure    String?
+  heartRate        Int?
+  respiratoryRate  Int?
+  oxygenSaturation Int?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+}
+
+model Encounter {
+  id                      String   @id @default(cuid())
+  appointmentId           String   @unique
+  status                  String   @default("OPEN")
+  chiefComplaint          String?
+  historyOfPresentIllness String?
+  physicalExam            String?
+  assessment              String?
+  plan                    String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
 }
