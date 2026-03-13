@@ -11,6 +11,7 @@ import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { TriageModule } from './triage/triage.module';
 import { EncountersModule } from './encounters/encounters.module';
+import { PrescriptionsModule } from './prescriptions/prescriptions.module';
 
 @Module({
   imports: [
@@ -26,6 +27,8 @@ import { EncountersModule } from './encounters/encounters.module';
     DashboardModule,
     TriageModule,
     EncountersModule,
+    PrescriptionsModule,
+
   ],
 })
 export class AppModule {}
