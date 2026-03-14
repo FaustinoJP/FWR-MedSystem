@@ -40,14 +40,28 @@ enum InvoiceStatus {
   PARTIALLY_PAID
   PAID
   CANCELLED
+  VOID
 }
 
 enum PaymentMethodType {
   CASH
   CARD
+  POS
   BANK_TRANSFER
   INSURANCE
+  RUP
+  EXEMPT
   OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  REFERENCE_GENERATED
+  AWAITING_PAYMENT
+  PAID
+  FAILED
+  EXPIRED
+  CANCELLED
 }
 
 model Role {
@@ -149,11 +163,15 @@ model Invoice {
   patientId      String
   appointmentId  String?       @unique
   invoiceNumber  String        @unique
+  description    String?
   totalAmount    Float         @default(0)
   discountAmount Float         @default(0)
   paidAmount     Float         @default(0)
   balance        Float         @default(0)
   status         InvoiceStatus @default(DRAFT)
+  issuedAt       DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   patient     Patient       @relation(fields: [patientId], references: [id])
   appointment Appointment?  @relation(fields: [appointmentId], references: [id])
@@ -174,12 +192,19 @@ model InvoiceItem {
 }
 
 model Payment {
-  id                   String   @id @default(cuid())
-  invoiceId            String
-  paymentMethodId      String
-  amount               Float
-  transactionReference String?
-  paidAt               DateTime @default(now())
+  id                    String        @id @default(cuid())
+  invoiceId             String
+  paymentMethodId       String
+  amount                Float
+  status                PaymentStatus @default(PENDING)
+  reference             String?
+  transactionReference  String?
+  externalTransactionId String?
+  paidAt                DateTime?
+  expiresAt             DateTime?
+  metadata              Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   invoice       Invoice       @relation(fields: [invoiceId], references: [id])
   paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])

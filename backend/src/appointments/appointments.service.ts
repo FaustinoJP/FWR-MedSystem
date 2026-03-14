@@ -71,13 +71,14 @@ export class AppointmentsService {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
       include: {
-        patient: true,
-        doctor: true,
-        department: true,
-        Invoice: true,
-        triage: true,
-        encounter: true,
-        labOrders: true,
+         patient: true,
+         doctor: true,
+         department: true,
+         Invoice: true,
+         triage: true,
+         encounter: true,
+         prescriptions: true,
+         labOrders: true,
       },
     });
 
