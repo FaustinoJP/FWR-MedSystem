@@ -106,6 +106,7 @@ model Appointment {
   triage        Triage?
   encounter     Encounter?
   prescriptions Prescription[]
+  labOrders     LabOrder[]
 
   createdAt DateTime @default(now())
 }
@@ -226,6 +227,19 @@ model Prescription {
   instructions   String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+}
+
+model LabOrder {
+  id            String   @id @default(cuid())
+  appointmentId String
+  testName      String
+  category      String?
+  notes         String?
+  status        String   @default("REQUESTED")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
 }

@@ -77,6 +77,7 @@ export class AppointmentsService {
         Invoice: true,
         triage: true,
         encounter: true,
+        labOrders: true,
       },
     });
 

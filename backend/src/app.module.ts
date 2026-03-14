@@ -12,6 +12,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { TriageModule } from './triage/triage.module';
 import { EncountersModule } from './encounters/encounters.module';
 import { PrescriptionsModule } from './prescriptions/prescriptions.module';
+import { LabOrdersModule } from './lab-orders/lab-orders.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PrescriptionsModule } from './prescriptions/prescriptions.module';
     TriageModule,
     EncountersModule,
     PrescriptionsModule,
+    LabOrdersModule,
 
   ],
 })

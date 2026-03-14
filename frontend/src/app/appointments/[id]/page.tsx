@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useAppointmentDetails } from '@/hooks/use-appointment-details';
 import { useTriage } from '@/hooks/use-triage';
 import { useEncounter } from '@/hooks/use-encounter';
+import { usePrescriptions } from '@/hooks/use-prescriptions';
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -24,11 +25,57 @@ export default function AppointmentDetailsPage() {
   const triage = triageQuery.data;
   const encounter = encounterQuery.data;
 
-  const [tab, setTab] = useState<'overview' | 'triage' | 'encounter'>('overview');
+  const prescriptionsQuery = usePrescriptions(appointmentId);
+  const prescriptions = prescriptionsQuery.data;
+
+
+  const [tab, setTab] = useState<'overview' | 'triage' | 'encounter' | 'prescriptions'>('overview');
   const [savingTriage, setSavingTriage] = useState(false);
   const [savingEncounter, setSavingEncounter] = useState(false);
   const [triageMessage, setTriageMessage] = useState('');
   const [encounterMessage, setEncounterMessage] = useState('');
+
+  const [savingPrescription, setSavingPrescription] = useState(false);
+  const [prescriptionMessage, setPrescriptionMessage] = useState('');
+
+  const [prescriptionForm, setPrescriptionForm] = useState({
+    medicationName: '',
+    dosage: '',
+    frequency: '',
+    duration: '',
+    instructions: '',
+  });
+
+  async function submitPrescription(e: React.FormEvent) {
+  e.preventDefault();
+  setSavingPrescription(true);
+  setPrescriptionMessage('');
+
+  try {
+    await prescriptionsQuery.create({
+      medicationName: prescriptionForm.medicationName,
+      dosage: prescriptionForm.dosage,
+      frequency: prescriptionForm.frequency,
+      duration: prescriptionForm.duration,
+      instructions: prescriptionForm.instructions || undefined,
+    });
+
+    setPrescriptionMessage('Prescrição criada com sucesso.');
+    setPrescriptionForm({
+      medicationName: '',
+      dosage: '',
+      frequency: '',
+      duration: '',
+      instructions: '',
+    });
+
+    await appointmentQuery.refetch();
+  } catch (err: any) {
+    setPrescriptionMessage(err.message || 'Erro ao guardar prescrição');
+  } finally {
+    setSavingPrescription(false);
+  }
+}
 
   const [triageForm, setTriageForm] = useState({
     weight: '',
@@ -155,7 +202,7 @@ export default function AppointmentDetailsPage() {
         <Info label="Data" value={formatDate(appointment.appointmentDate)} />
       </div>
 
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <TabButton active={tab === 'overview'} onClick={() => setTab('overview')}>
           Resumo
         </TabButton>
@@ -164,6 +211,9 @@ export default function AppointmentDetailsPage() {
         </TabButton>
         <TabButton active={tab === 'encounter'} onClick={() => setTab('encounter')}>
           Atendimento
+        </TabButton>
+        <TabButton active={tab === 'prescriptions'} onClick={() => setTab('prescriptions')}>
+          Prescrições
         </TabButton>
       </div>
 
@@ -338,6 +388,150 @@ export default function AppointmentDetailsPage() {
           </form>
         </section>
       )}
+
+    {tab === 'prescriptions' && (
+  <section style={cardStyle}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div>
+        <h3 style={{ margin: 0 }}>Prescrições</h3>
+        <p style={{ ...muted, marginTop: 4 }}>
+          Registe os medicamentos prescritos para esta consulta.
+        </p>
+      </div>
+    </div>
+
+    <form onSubmit={submitPrescription} style={{ display: 'grid', gap: 16 }}>
+      <div style={grid2}>
+        <Field label="Medicamento">
+          <input
+            value={prescriptionForm.medicationName}
+            onChange={(e) =>
+              setPrescriptionForm((p) => ({ ...p, medicationName: e.target.value }))
+            }
+            placeholder="Ex.: Paracetamol 500mg"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Dose">
+          <input
+            value={prescriptionForm.dosage}
+            onChange={(e) =>
+              setPrescriptionForm((p) => ({ ...p, dosage: e.target.value }))
+            }
+            placeholder="Ex.: 1 comprimido"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Frequência">
+          <input
+            value={prescriptionForm.frequency}
+            onChange={(e) =>
+              setPrescriptionForm((p) => ({ ...p, frequency: e.target.value }))
+            }
+            placeholder="Ex.: 8/8h"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Duração">
+          <input
+            value={prescriptionForm.duration}
+            onChange={(e) =>
+              setPrescriptionForm((p) => ({ ...p, duration: e.target.value }))
+            }
+            placeholder="Ex.: 5 dias"
+            style={inputStyle}
+          />
+        </Field>
+      </div>
+
+      <Field label="Instruções">
+        <textarea
+          value={prescriptionForm.instructions}
+          onChange={(e) =>
+            setPrescriptionForm((p) => ({ ...p, instructions: e.target.value }))
+          }
+          placeholder="Ex.: Tomar após as refeições"
+          style={textareaStyle}
+        />
+      </Field>
+
+      {prescriptionMessage ? (
+        <p style={{ color: prescriptionMessage.includes('sucesso') ? 'green' : 'crimson', margin: 0 }}>
+          {prescriptionMessage}
+        </p>
+      ) : null}
+
+      <div>
+        <button type="submit" style={buttonStyle} disabled={savingPrescription}>
+          {savingPrescription ? 'A guardar...' : 'Guardar prescrição'}
+        </button>
+      </div>
+    </form>
+
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div>
+        <h4 style={{ marginBottom: 4 }}>Lista de prescrições</h4>
+        <p style={muted}>Prescrições já registadas nesta consulta.</p>
+      </div>
+
+      {prescriptionsQuery.loading ? (
+        <p style={muted}>A carregar prescrições...</p>
+      ) : prescriptions.length === 0 ? (
+        <div
+          style={{
+            border: '1px dashed #cbd5e1',
+            borderRadius: 10,
+            padding: 16,
+            color: '#64748b',
+            background: '#f8fafc',
+          }}
+        >
+          Nenhuma prescrição registada.
+        </div>
+      ) : (
+        prescriptions.map((item) => (
+          <div
+            key={item.id}
+            style={{
+              border: '1px solid #e2e8f0',
+              borderRadius: 12,
+              padding: 14,
+              display: 'grid',
+              gap: 8,
+              background: '#f8fafc',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+              <strong style={{ fontSize: 16 }}>{item.medicationName}</strong>
+              <span
+                style={{
+                  fontSize: 12,
+                  background: '#e2e8f0',
+                  padding: '4px 8px',
+                  borderRadius: 999,
+                }}
+              >
+                {formatDate(item.createdAt)}
+              </span>
+            </div>
+
+            <div style={{ color: '#0f172a' }}>
+              {item.dosage} • {item.frequency} • {item.duration}
+            </div>
+
+            <div style={{ color: '#475569' }}>
+              <strong>Instruções:</strong> {item.instructions || '-'}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  </section>
+)}
+
     </div>
   );
 }
