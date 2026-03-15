@@ -15,6 +15,15 @@ export type Patient = {
 };
 
 export type Appointment = {
+  prescriptions?: {
+  id: string;
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions?: string | null;
+}[];
+
   id: string;
   appointmentDate: string;
   status: string;

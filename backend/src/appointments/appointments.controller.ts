@@ -7,25 +7,34 @@ import { UpdateStatusDto } from './dto/update-status.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('appointments')
 export class AppointmentsController {
-  constructor(private service: AppointmentsService) {}
+  constructor(private readonly appointmentsService: AppointmentsService) {}
 
   @Post()
   create(@Body() dto: CreateAppointmentDto) {
-    return this.service.create(dto);
+    return this.appointmentsService.create(dto);
   }
 
   @Get()
-  findAll(@Query('search') search?: string, @Query('status') status?: string, @Query('date') date?: string) {
-    return this.service.findAll({ search, status, date });
+  findAll(
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('date') date?: string,
+  ) {
+    return this.appointmentsService.findAll({ search, status, date });
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+    return this.appointmentsService.findOne(id);
   }
 
   @Patch(':id/status')
   updateStatus(@Param('id') id: string, @Body() dto: UpdateStatusDto) {
-    return this.service.updateStatus(id, dto.status);
+    return this.appointmentsService.updateStatus(id, dto.status);
+  }
+
+  @Patch(':id/complete')
+  complete(@Param('id') id: string) {
+    return this.appointmentsService.complete(id);
   }
 }

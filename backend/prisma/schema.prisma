@@ -40,14 +40,28 @@ enum InvoiceStatus {
   PARTIALLY_PAID
   PAID
   CANCELLED
+  VOID
 }
 
 enum PaymentMethodType {
   CASH
   CARD
+  POS
   BANK_TRANSFER
   INSURANCE
+  RUP
+  EXEMPT
   OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  REFERENCE_GENERATED
+  AWAITING_PAYMENT
+  PAID
+  FAILED
+  EXPIRED
+  CANCELLED
 }
 
 model Role {
@@ -99,12 +113,16 @@ model Appointment {
   status          AppointmentStatus @default(SCHEDULED)
   reason          String?
 
-  patient    Patient    @relation(fields: [patientId], references: [id])
-  doctor     User       @relation("DoctorAppointments", fields: [doctorId], references: [id])
-  department Department @relation(fields: [departmentId], references: [id])
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  doctor        User           @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  department    Department     @relation(fields: [departmentId], references: [id])
+  Invoice       Invoice?
+  triage        Triage?
+  encounter     Encounter?
+  prescriptions Prescription[]
+  labOrders     LabOrder[]
 
   createdAt DateTime @default(now())
-  Invoice   Invoice?
 }
 
 model Medication {
@@ -145,11 +163,15 @@ model Invoice {
   patientId      String
   appointmentId  String?       @unique
   invoiceNumber  String        @unique
+  description    String?
   totalAmount    Float         @default(0)
   discountAmount Float         @default(0)
   paidAmount     Float         @default(0)
   balance        Float         @default(0)
   status         InvoiceStatus @default(DRAFT)
+  issuedAt       DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   patient     Patient       @relation(fields: [patientId], references: [id])
   appointment Appointment?  @relation(fields: [appointmentId], references: [id])
@@ -170,13 +192,79 @@ model InvoiceItem {
 }
 
 model Payment {
-  id                   String   @id @default(cuid())
-  invoiceId            String
-  paymentMethodId      String
-  amount               Float
-  transactionReference String?
-  paidAt               DateTime @default(now())
+  id                    String        @id @default(cuid())
+  invoiceId             String
+  paymentMethodId       String
+  amount                Float
+  status                PaymentStatus @default(PENDING)
+  reference             String?
+  transactionReference  String?
+  externalTransactionId String?
+  paidAt                DateTime?
+  expiresAt             DateTime?
+  metadata              Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   invoice       Invoice       @relation(fields: [invoiceId], references: [id])
   paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+}
+
+model Triage {
+  id               String   @id @default(cuid())
+  appointmentId    String   @unique
+  weight           Float?
+  height           Float?
+  temperature      Float?
+  bloodPressure    String?
+  heartRate        Int?
+  respiratoryRate  Int?
+  oxygenSaturation Int?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+}
+
+model Encounter {
+  id                      String   @id @default(cuid())
+  appointmentId           String   @unique
+  status                  String   @default("OPEN")
+  chiefComplaint          String?
+  historyOfPresentIllness String?
+  physicalExam            String?
+  assessment              String?
+  plan                    String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+}
+
+model Prescription {
+  id             String   @id @default(cuid())
+  appointmentId  String
+  medicationName String
+  dosage         String
+  frequency      String
+  duration       String
+  instructions   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+}
+
+model LabOrder {
+  id            String   @id @default(cuid())
+  appointmentId String
+  testName      String
+  category      String?
+  notes         String?
+  status        String   @default("REQUESTED")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
 }

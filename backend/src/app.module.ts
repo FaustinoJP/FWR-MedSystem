@@ -9,6 +9,11 @@ import { MedicationsModule } from './medications/medications.module';
 import { LabTestTypesModule } from './lab-test-types/lab-test-types.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { TriageModule } from './triage/triage.module';
+import { EncountersModule } from './encounters/encounters.module';
+import { PrescriptionsModule } from './prescriptions/prescriptions.module';
+import { LabOrdersModule } from './lab-orders/lab-orders.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -22,6 +27,14 @@ import { DashboardModule } from './dashboard/dashboard.module';
     LabTestTypesModule,
     PaymentMethodsModule,
     DashboardModule,
+    TriageModule,
+    EncountersModule,
+    PrescriptionsModule,
+    LabOrdersModule,
+    BillingModule,
+
   ],
 })
 export class AppModule {}
+
+
