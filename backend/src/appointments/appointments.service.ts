@@ -95,5 +95,45 @@ export class AppointmentsService {
       data: { status: status as any },
     });
   }
+
+  async complete(id: string) {
+  const appointment = await this.prisma.appointment.findUnique({
+    where: { id },
+    include: {
+      encounter: true,
+    },
+  });
+
+  if (!appointment) {
+    throw new NotFoundException('Consulta não encontrada');
+  }
+
+  if (appointment.encounter) {
+    await this.prisma.encounter.update({
+      where: { appointmentId: id },
+      data: {
+        status: 'CLOSED',
+      },
+    });
+  }
+
+  return this.prisma.appointment.update({
+    where: { id },
+    data: {
+      status: 'COMPLETED',
+    },
+    include: {
+      patient: true,
+      doctor: true,
+      department: true,
+      Invoice: true,
+      triage: true,
+      encounter: true,
+      prescriptions: true,
+      labOrders: true,
+    },
+  });
+}
+
 }
 
