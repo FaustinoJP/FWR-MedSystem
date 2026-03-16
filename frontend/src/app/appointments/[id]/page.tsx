@@ -11,6 +11,7 @@ import { useLabOrders } from '@/hooks/use-lab-orders';
 import { useInvoice } from '@/hooks/use-invoice';
 import { usePayments } from '@/hooks/use-payments';
 import { usePaymentMethods } from '@/hooks/use-payment-methods';
+import { useCompleteAppointment } from '@/hooks/use-complete-appointment';
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
@@ -37,6 +38,7 @@ export default function AppointmentDetailsPage() {
   const invoiceQuery = useInvoice(appointmentId);
   const paymentMethodsQuery = usePaymentMethods();
   const paymentsQuery = usePayments(invoiceQuery.data?.id);
+  const completeAppointment = useCompleteAppointment();
 
   const appointment = appointmentQuery.data;
   const triage = triageQuery.data;
@@ -68,6 +70,7 @@ export default function AppointmentDetailsPage() {
   const [prescriptionMessage, setPrescriptionMessage] = useState('');
   const [labOrderMessage, setLabOrderMessage] = useState('');
   const [billingMessage, setBillingMessage] = useState('');
+  const [completeMessage, setCompleteMessage] = useState('');
 
   const [triageForm, setTriageForm] = useState({
     weight: '',
@@ -117,6 +120,29 @@ export default function AppointmentDetailsPage() {
     transactionReference: '',
     externalTransactionId: '',
   });
+
+  const isCompleted = appointment?.status === 'COMPLETED';
+
+  async function handleCompleteAppointment() {
+    if (!appointmentId) return;
+
+    const confirmed = window.confirm(
+      'Tem certeza que deseja encerrar esta consulta? Esta ação fecha o atendimento clínico.',
+    );
+
+    if (!confirmed) return;
+
+    setCompleteMessage('');
+
+    try {
+      await completeAppointment.complete(appointmentId);
+      setCompleteMessage('Consulta encerrada com sucesso.');
+      await appointmentQuery.refetch();
+      await encounterQuery.refetch();
+    } catch (err: any) {
+      setCompleteMessage(err.message || 'Erro ao encerrar consulta');
+    }
+  }
 
   async function submitTriage(e: React.FormEvent) {
     e.preventDefault();
@@ -355,10 +381,49 @@ export default function AppointmentDetailsPage() {
             {appointment.department.name}
           </p>
         </div>
-        <div style={{ background: '#e2e8f0', padding: '8px 12px', borderRadius: 999 }}>
-          {appointment.status}
+
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {isCompleted ? (
+            <div
+              style={{
+                background: '#dcfce7',
+                color: '#166534',
+                padding: '8px 12px',
+                borderRadius: 999,
+                fontWeight: 600,
+              }}
+            >
+              Consulta concluída
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCompleteAppointment}
+              disabled={completeAppointment.loading}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 10,
+                border: 0,
+                background: '#166534',
+                color: 'white',
+                cursor: 'pointer',
+              }}
+            >
+              {completeAppointment.loading ? 'A encerrar...' : 'Encerrar consulta'}
+            </button>
+          )}
+
+          <div style={{ background: '#e2e8f0', padding: '8px 12px', borderRadius: 999 }}>
+            {appointment.status}
+          </div>
         </div>
       </div>
+
+      {completeMessage ? (
+        <p style={{ color: completeMessage.includes('sucesso') ? 'green' : 'crimson', margin: 0 }}>
+          {completeMessage}
+        </p>
+      ) : null}
 
       <div
         style={{
@@ -441,6 +506,9 @@ export default function AppointmentDetailsPage() {
       {tab === 'triage' && (
         <section style={cardStyle}>
           <h3>{triage ? 'Atualizar triagem' : 'Criar triagem'}</h3>
+
+          {isCompleted ? <LockedMessage /> : null}
+
           <form onSubmit={submitTriage} style={{ display: 'grid', gap: 12 }}>
             <div style={grid2}>
               <Field label="Peso (kg)">
@@ -472,8 +540,8 @@ export default function AppointmentDetailsPage() {
 
             {triageMessage ? <p style={{ color: triageMessage.includes('sucesso') ? 'green' : 'crimson' }}>{triageMessage}</p> : null}
 
-            <button type="submit" style={buttonStyle} disabled={savingTriage}>
-              {savingTriage ? 'A guardar...' : triage ? 'Atualizar triagem' : 'Guardar triagem'}
+            <button type="submit" style={buttonStyle} disabled={savingTriage || isCompleted}>
+              {savingTriage ? 'A guardar...' : isCompleted ? 'Consulta encerrada' : triage ? 'Atualizar triagem' : 'Guardar triagem'}
             </button>
           </form>
         </section>
@@ -482,6 +550,9 @@ export default function AppointmentDetailsPage() {
       {tab === 'encounter' && (
         <section style={cardStyle}>
           <h3>{encounter ? 'Atualizar atendimento clínico' : 'Criar atendimento clínico'}</h3>
+
+          {isCompleted ? <LockedMessage /> : null}
+
           <form onSubmit={submitEncounter} style={{ display: 'grid', gap: 12 }}>
             <Field label="Queixa principal">
               <textarea value={encounterForm.chiefComplaint} onChange={(e) => setEncounterForm((p) => ({ ...p, chiefComplaint: e.target.value }))} style={textareaStyle} />
@@ -505,8 +576,8 @@ export default function AppointmentDetailsPage() {
 
             {encounterMessage ? <p style={{ color: encounterMessage.includes('sucesso') ? 'green' : 'crimson' }}>{encounterMessage}</p> : null}
 
-            <button type="submit" style={buttonStyle} disabled={savingEncounter}>
-              {savingEncounter ? 'A guardar...' : encounter ? 'Atualizar atendimento' : 'Guardar atendimento'}
+            <button type="submit" style={buttonStyle} disabled={savingEncounter || isCompleted}>
+              {savingEncounter ? 'A guardar...' : isCompleted ? 'Consulta encerrada' : encounter ? 'Atualizar atendimento' : 'Guardar atendimento'}
             </button>
           </form>
         </section>
@@ -518,6 +589,8 @@ export default function AppointmentDetailsPage() {
             <h3 style={{ margin: 0 }}>Prescrições</h3>
             <p style={{ ...muted, marginTop: 4 }}>Registe os medicamentos prescritos para esta consulta.</p>
           </div>
+
+          {isCompleted ? <LockedMessage /> : null}
 
           <form onSubmit={submitPrescription} style={{ display: 'grid', gap: 16 }}>
             <div style={grid2}>
@@ -545,8 +618,8 @@ export default function AppointmentDetailsPage() {
             {prescriptionMessage ? <p style={{ color: prescriptionMessage.includes('sucesso') ? 'green' : 'crimson', margin: 0 }}>{prescriptionMessage}</p> : null}
 
             <div>
-              <button type="submit" style={buttonStyle} disabled={savingPrescription}>
-                {savingPrescription ? 'A guardar...' : 'Guardar prescrição'}
+              <button type="submit" style={buttonStyle} disabled={savingPrescription || isCompleted}>
+                {savingPrescription ? 'A guardar...' : isCompleted ? 'Consulta encerrada' : 'Guardar prescrição'}
               </button>
             </div>
           </form>
@@ -584,6 +657,8 @@ export default function AppointmentDetailsPage() {
             <p style={{ ...muted, marginTop: 4 }}>Registe os exames solicitados nesta consulta.</p>
           </div>
 
+          {isCompleted ? <LockedMessage /> : null}
+
           <form onSubmit={submitLabOrder} style={{ display: 'grid', gap: 16 }}>
             <div style={grid2}>
               <Field label="Exame">
@@ -602,8 +677,8 @@ export default function AppointmentDetailsPage() {
             {labOrderMessage ? <p style={{ color: labOrderMessage.includes('sucesso') ? 'green' : 'crimson', margin: 0 }}>{labOrderMessage}</p> : null}
 
             <div>
-              <button type="submit" style={buttonStyle} disabled={savingLabOrder}>
-                {savingLabOrder ? 'A guardar...' : 'Guardar exame'}
+              <button type="submit" style={buttonStyle} disabled={savingLabOrder || isCompleted}>
+                {savingLabOrder ? 'A guardar...' : isCompleted ? 'Consulta encerrada' : 'Guardar exame'}
               </button>
             </div>
           </form>
@@ -876,6 +951,22 @@ export default function AppointmentDetailsPage() {
           )}
         </section>
       )}
+    </div>
+  );
+}
+
+function LockedMessage() {
+  return (
+    <div
+      style={{
+        padding: 12,
+        borderRadius: 10,
+        background: '#fef3c7',
+        color: '#92400e',
+        border: '1px solid #fcd34d',
+      }}
+    >
+      Esta consulta está concluída. Os registos clínicos estão bloqueados para edição.
     </div>
   );
 }
