@@ -102,17 +102,20 @@ async function main() {
     skipDuplicates: true,
   });
 
-  for (const method of [
-    { name: 'Caixa', type: 'CASH' },
-    { name: 'TPA', type: 'CARD' },
-    { name: 'Transferência Bancária', type: 'BANK_TRANSFER' },
-  ]) {
-    await prisma.paymentMethod.upsert({
-      where: { name: method.name },
-      update: { type: method.type as any, isActive: true },
-      create: { ...method, type: method.type as any, isActive: true },
-    });
-  }
+ for (const method of [
+  { name: 'Caixa', type: 'CASH' },
+  { name: 'TPA', type: 'POS' },
+  { name: 'Transferência Bancária', type: 'BANK_TRANSFER' },
+  { name: 'RUP', type: 'RUP' },
+  { name: 'Seguro', type: 'INSURANCE' },
+  { name: 'Isento', type: 'EXEMPT' },
+]) {
+  await prisma.paymentMethod.upsert({
+    where: { name: method.name },
+    update: { type: method.type as any, isActive: true },
+    create: { ...method, type: method.type as any, isActive: true },
+  });
+}
 
   await prisma.service.upsert({
     where: { code: 'CONS-GERAL' },
