@@ -78,6 +78,10 @@ model User {
   passwordHash String
   roleId       String
   status       UserStatus    @default(ACTIVE)
+
+  departmentId String?
+  department   Department?   @relation(fields: [departmentId], references: [id])
+
   role         Role          @relation(fields: [roleId], references: [id])
   appointments Appointment[] @relation("DoctorAppointments")
 }
@@ -87,6 +91,7 @@ model Department {
   name         String        @unique
   appointments Appointment[]
   services     Service[]
+  users        User[]
 }
 
 model Patient {
@@ -228,16 +233,16 @@ model Triage {
 }
 
 model Encounter {
-  id                      String   @id @default(cuid())
-  appointmentId           String   @unique
-  status                  String   @default("OPEN")
+  id                      String          @id @default(cuid())
+  appointmentId           String          @unique
+  status                  EncounterStatus @default(OPEN)
   chiefComplaint          String?
   historyOfPresentIllness String?
   physicalExam            String?
   assessment              String?
   plan                    String?
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
 }

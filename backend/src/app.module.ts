@@ -14,6 +14,8 @@ import { EncountersModule } from './encounters/encounters.module';
 import { PrescriptionsModule } from './prescriptions/prescriptions.module';
 import { LabOrdersModule } from './lab-orders/lab-orders.module';
 import { BillingModule } from './billing/billing.module';
+import { DepartmentsModule } from './departments/departments.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -21,6 +23,7 @@ import { BillingModule } from './billing/billing.module';
     PrismaModule,
     AuthModule,
     UsersModule,
+    RolesModule,
     PatientsModule,
     AppointmentsModule,
     MedicationsModule,
@@ -32,6 +35,7 @@ import { BillingModule } from './billing/billing.module';
     PrescriptionsModule,
     LabOrdersModule,
     BillingModule,
+    DepartmentsModule,
 
   ],
 })
