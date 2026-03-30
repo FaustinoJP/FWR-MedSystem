@@ -1,25 +1,32 @@
 import { request } from '@/lib/api';
-import type { CreatePrescriptionPayload, Prescription } from '@/types/prescription';
+
+export type Prescription = {
+  id: string;
+  appointmentId: string;
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions?: string | null;
+  createdAt?: string;
+};
+
+export type CreatePrescriptionPayload = {
+  medicationName: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions?: string;
+};
 
 export const prescriptionsService = {
   listByAppointment(appointmentId: string) {
-    return request<Prescription[]>(`/appointments/${appointmentId}/prescriptions`);
+    return request<Prescription[]>(`/prescriptions/${appointmentId}`);
   },
 
   create(appointmentId: string, payload: CreatePrescriptionPayload) {
-    return request<Prescription>(`/appointments/${appointmentId}/prescriptions`, {
+    return request<Prescription>(`/prescriptions/${appointmentId}`, {
       method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  },
-
-  getById(id: string) {
-    return request<Prescription>(`/prescriptions/${id}`);
-  },
-
-  update(id: string, payload: Partial<CreatePrescriptionPayload>) {
-    return request<Prescription>(`/prescriptions/${id}`, {
-      method: 'PATCH',
       body: JSON.stringify(payload),
     });
   },

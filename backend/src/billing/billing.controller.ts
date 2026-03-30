@@ -1,25 +1,26 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { BillingService } from './billing.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
 import { UpdatePaymentStatusDto } from './dto/update-payment-status.dto';
 
-@UseGuards(JwtAuthGuard)
-@Controller()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('billing')
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
 
-  @Post('appointments/:appointmentId/invoice')
+  @Get('invoice/:appointmentId')
+  @Roles('ADMIN', 'FATURACAO')
+  findInvoice(@Param('appointmentId') appointmentId: string) {
+    return this.billingService.findInvoiceByAppointment(appointmentId);
+  }
+
+  @Post('invoice/:appointmentId')
+  @Roles('ADMIN', 'FATURACAO')
   createInvoice(
     @Param('appointmentId') appointmentId: string,
     @Body() dto: CreateInvoiceDto,
@@ -27,20 +28,23 @@ export class BillingController {
     return this.billingService.createInvoice(appointmentId, dto);
   }
 
-  @Get('appointments/:appointmentId/invoice')
-  findInvoiceByAppointment(@Param('appointmentId') appointmentId: string) {
-    return this.billingService.findInvoiceByAppointment(appointmentId);
-  }
-
-  @Patch('invoices/:id/status')
+  @Patch('invoice/:invoiceId/status')
+  @Roles('ADMIN', 'FATURACAO')
   updateInvoiceStatus(
-    @Param('id') id: string,
+    @Param('invoiceId') invoiceId: string,
     @Body() dto: UpdateInvoiceStatusDto,
   ) {
-    return this.billingService.updateInvoiceStatus(id, dto);
+    return this.billingService.updateInvoiceStatus(invoiceId, dto.status);
   }
 
-  @Post('invoices/:invoiceId/payments')
+  @Get('payments/:invoiceId')
+  @Roles('ADMIN', 'FATURACAO')
+  findPayments(@Param('invoiceId') invoiceId: string) {
+    return this.billingService.findPayments(invoiceId);
+  }
+
+  @Post('payments/:invoiceId')
+  @Roles('ADMIN', 'FATURACAO')
   createPayment(
     @Param('invoiceId') invoiceId: string,
     @Body() dto: CreatePaymentDto,
@@ -48,16 +52,12 @@ export class BillingController {
     return this.billingService.createPayment(invoiceId, dto);
   }
 
-  @Get('invoices/:invoiceId/payments')
-  listPayments(@Param('invoiceId') invoiceId: string) {
-    return this.billingService.listPayments(invoiceId);
-  }
-
-  @Patch('payments/:id/status')
+  @Patch('payments/:paymentId/status')
+  @Roles('ADMIN', 'FATURACAO')
   updatePaymentStatus(
-    @Param('id') id: string,
+    @Param('paymentId') paymentId: string,
     @Body() dto: UpdatePaymentStatusDto,
   ) {
-    return this.billingService.updatePaymentStatus(id, dto);
+    return this.billingService.updatePaymentStatus(paymentId, dto.status);
   }
 }

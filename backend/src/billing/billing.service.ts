@@ -1,54 +1,82 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
-import { UpdatePaymentStatusDto } from './dto/update-payment-status.dto';
 
 @Injectable()
 export class BillingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findInvoiceByAppointment(appointmentId: string) {
+    return this.prisma.invoice.findUnique({
+      where: { appointmentId },
+      include: {
+        items: true,
+        payments: {
+          include: {
+            paymentMethod: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+    });
+  }
 
   async createInvoice(appointmentId: string, dto: CreateInvoiceDto) {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
-      include: { Invoice: true, patient: true },
+      include: {
+        patient: true,
+      },
     });
 
     if (!appointment) {
       throw new NotFoundException('Consulta não encontrada');
     }
 
-    if (appointment.Invoice) {
-      throw new ConflictException('Já existe uma fatura para esta consulta');
+    const existingInvoice = await this.prisma.invoice.findUnique({
+      where: { appointmentId },
+    });
+
+    if (existingInvoice) {
+      return this.prisma.invoice.findUnique({
+        where: { id: existingInvoice.id },
+        include: {
+          items: true,
+          payments: {
+            include: {
+              paymentMethod: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+        },
+      });
     }
 
-    const totalAmount = Number(dto.totalAmount ?? 0);
-    const discountAmount = Number(dto.discountAmount ?? 0);
-    const balance = totalAmount - discountAmount;
+    const totalAmount = Number(dto.totalAmount || 0);
+    const discountAmount = Number(dto.discountAmount || 0);
+    const paidAmount = 0;
+    const balance = totalAmount - discountAmount - paidAmount;
 
-    const count = await this.prisma.invoice.count();
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(6, '0')}`;
+    const invoiceNumber = `INV-${Date.now()}`;
 
     return this.prisma.invoice.create({
       data: {
-        appointmentId,
         patientId: appointment.patientId,
+        appointmentId,
         invoiceNumber,
-        description: dto.description || 'Faturação da consulta',
+        description: dto.description,
         totalAmount,
         discountAmount,
-        paidAmount: 0,
+        paidAmount,
         balance,
-        status: 'ISSUED' as any,
+        status: balance <= 0 ? 'PAID' : 'ISSUED',
       },
       include: {
-        patient: true,
-        appointment: true,
         items: true,
         payments: {
           include: {
@@ -59,32 +87,9 @@ export class BillingService {
     });
   }
 
-  async findInvoiceByAppointment(appointmentId: string) {
-    const invoice = await this.prisma.invoice.findFirst({
-      where: { appointmentId },
-      include: {
-        patient: true,
-        appointment: true,
-        items: true,
-        payments: {
-          include: {
-            paymentMethod: true,
-          },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
-
-    if (!invoice) {
-      throw new NotFoundException('Fatura não encontrada para esta consulta');
-    }
-
-    return invoice;
-  }
-
-  async updateInvoiceStatus(id: string, dto: UpdateInvoiceStatusDto) {
+  async updateInvoiceStatus(invoiceId: string, status: string) {
     const invoice = await this.prisma.invoice.findUnique({
-      where: { id },
+      where: { id: invoiceId },
     });
 
     if (!invoice) {
@@ -92,9 +97,37 @@ export class BillingService {
     }
 
     return this.prisma.invoice.update({
-      where: { id },
+      where: { id: invoiceId },
       data: {
-        status: dto.status as any,
+        status: status as any,
+      },
+      include: {
+        items: true,
+        payments: {
+          include: {
+            paymentMethod: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findPayments(invoiceId: string) {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id: invoiceId },
+    });
+
+    if (!invoice) {
+      throw new NotFoundException('Fatura não encontrada');
+    }
+
+    return this.prisma.payment.findMany({
+      where: { invoiceId },
+      include: {
+        paymentMethod: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
   }
@@ -102,7 +135,6 @@ export class BillingService {
   async createPayment(invoiceId: string, dto: CreatePaymentDto) {
     const invoice = await this.prisma.invoice.findUnique({
       where: { id: invoiceId },
-      include: { payments: true },
     });
 
     if (!invoice) {
@@ -113,102 +145,91 @@ export class BillingService {
       where: { id: dto.paymentMethodId },
     });
 
-    if (!paymentMethod || !paymentMethod.isActive) {
-      throw new NotFoundException('Método de pagamento não encontrado ou inativo');
+    if (!paymentMethod) {
+      throw new NotFoundException('Método de pagamento não encontrado');
     }
+
+    const amount = Number(dto.amount || 0);
 
     const payment = await this.prisma.payment.create({
       data: {
         invoiceId,
         paymentMethodId: dto.paymentMethodId,
-        amount: dto.amount,
-        status: paymentMethod.type === 'RUP' ? ('REFERENCE_GENERATED' as any) : ('PAID' as any),
+        amount,
         reference: dto.reference,
         transactionReference: dto.transactionReference,
         externalTransactionId: dto.externalTransactionId,
-        paidAt: paymentMethod.type === 'RUP' ? null : new Date(),
-        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
         metadata: dto.metadata,
+        status: 'PENDING',
       },
       include: {
         paymentMethod: true,
-        invoice: true,
       },
     });
-
-    await this.recalculateInvoice(invoiceId);
 
     return payment;
   }
 
-  async listPayments(invoiceId: string) {
-    return this.prisma.payment.findMany({
-      where: { invoiceId },
-      include: {
-        paymentMethod: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async updatePaymentStatus(id: string, dto: UpdatePaymentStatusDto) {
+  async updatePaymentStatus(paymentId: string, status: string) {
     const payment = await this.prisma.payment.findUnique({
-      where: { id },
+      where: { id: paymentId },
     });
 
     if (!payment) {
       throw new NotFoundException('Pagamento não encontrado');
     }
 
-    const updated = await this.prisma.payment.update({
-      where: { id },
+    const updatedPayment = await this.prisma.payment.update({
+      where: { id: paymentId },
       data: {
-        status: dto.status as any,
-        paidAt: dto.status === 'PAID' ? new Date() : payment.paidAt,
+        status: status as any,
+        paidAt: status === 'PAID' ? new Date() : payment.paidAt,
       },
       include: {
         paymentMethod: true,
-        invoice: true,
       },
     });
 
-    await this.recalculateInvoice(payment.invoiceId);
-
-    return updated;
-  }
-
-  private async recalculateInvoice(invoiceId: string) {
-    const invoice = await this.prisma.invoice.findUnique({
-      where: { id: invoiceId },
-      include: { payments: true },
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        invoiceId: payment.invoiceId,
+        status: 'PAID' as any,
+      },
     });
 
-    if (!invoice) return;
+    const paidAmount = payments.reduce((sum, item) => sum + Number(item.amount), 0);
 
-    const paidAmount = invoice.payments
-      .filter((p) => p.status === 'PAID')
-      .reduce((sum, p) => sum + Number(p.amount), 0);
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id: payment.invoiceId },
+    });
 
-    const totalNet = Number(invoice.totalAmount) - Number(invoice.discountAmount);
-    const balance = totalNet - paidAmount;
+    if (!invoice) {
+      throw new NotFoundException('Fatura não encontrada');
+    }
 
-    let status: string = 'ISSUED';
+    const balance =
+      Number(invoice.totalAmount) - Number(invoice.discountAmount) - Number(paidAmount);
+
+    let invoiceStatus: any = 'ISSUED';
 
     if (paidAmount <= 0) {
-      status = 'ISSUED';
-    } else if (paidAmount > 0 && balance > 0) {
-      status = 'PARTIALLY_PAID';
+      invoiceStatus = 'ISSUED';
     } else if (balance <= 0) {
-      status = 'PAID';
+      invoiceStatus = 'PAID';
+    } else {
+      invoiceStatus = 'PARTIALLY_PAID';
     }
 
     await this.prisma.invoice.update({
-      where: { id: invoiceId },
+      where: { id: payment.invoiceId },
       data: {
         paidAmount,
         balance,
-        status: status as any,
+        status: invoiceStatus,
       },
     });
+
+    return updatedPayment;
   }
 }

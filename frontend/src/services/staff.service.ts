@@ -67,7 +67,7 @@ export const staffService = {
     });
   },
 
-  update(id: string, payload: UpdateStaffPayload) {
+    update(id: string, payload: UpdateStaffPayload) {
     return request<StaffUser>(`/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),

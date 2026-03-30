@@ -49,6 +49,7 @@ export default function NewStaffPage() {
       }
     } catch (err) {
       console.error(err);
+      setMessage('Erro ao carregar perfis e departamentos');
     }
   }
 
@@ -76,107 +77,109 @@ export default function NewStaffPage() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 760, display: 'grid', gap: 20 }}>
-      <div>
-        <h1 style={{ margin: 0 }}>Novo profissional</h1>
-        <p style={{ margin: '6px 0 0', color: '#64748b' }}>
-          Criar médico, enfermeiro, rececionista ou utilizador de faturação.
-        </p>
-        <p style={{ margin: '8px 0 0' }}>
-          <Link href="/staff">← Voltar aos profissionais</Link>
-        </p>
+    <div style={pageStyle}>
+      <div style={containerStyle}>
+        <div>
+          <h1 style={{ margin: 0 }}>Novo profissional</h1>
+          <p style={{ margin: '6px 0 0', color: '#64748b' }}>
+            Criar médico, enfermeiro, rececionista ou utilizador de faturação.
+          </p>
+          <p style={{ margin: '8px 0 0' }}>
+            <Link href="/staff">← Voltar aos profissionais</Link>
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} style={cardStyle}>
+          <Field label="Nome">
+            <input
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              style={inputStyle}
+              required
+            />
+          </Field>
+
+          <Field label="Email">
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+              style={inputStyle}
+              required
+            />
+          </Field>
+
+          <Field label="Password">
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, password: e.target.value }))
+              }
+              style={inputStyle}
+              required
+            />
+          </Field>
+
+          <Field label="Perfil">
+            <select
+              value={form.roleId}
+              onChange={(e) => setForm((p) => ({ ...p, roleId: e.target.value }))}
+              style={inputStyle}
+              required
+            >
+              <option value="">Selecione o perfil</option>
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Departamento">
+            <select
+              value={form.departmentId}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, departmentId: e.target.value }))
+              }
+              style={inputStyle}
+            >
+              <option value="">Sem departamento</option>
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Estado">
+            <select
+              value={form.status}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  status: e.target.value as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
+                }))
+              }
+              style={inputStyle}
+            >
+              <option value="ACTIVE">Ativo</option>
+              <option value="INACTIVE">Inativo</option>
+              <option value="SUSPENDED">Suspenso</option>
+            </select>
+          </Field>
+
+          {message ? (
+            <p style={{ color: 'red', margin: 0 }}>{message}</p>
+          ) : null}
+
+          <button type="submit" style={buttonStyle} disabled={saving}>
+            {saving ? 'A guardar...' : 'Criar profissional'}
+          </button>
+        </form>
       </div>
-
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16 }}>
-        <Field label="Nome">
-          <input
-            value={form.name}
-            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            style={inputStyle}
-            required
-          />
-        </Field>
-
-        <Field label="Email">
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-            style={inputStyle}
-            required
-          />
-        </Field>
-
-        <Field label="Password">
-          <input
-            type="password"
-            value={form.password}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, password: e.target.value }))
-            }
-            style={inputStyle}
-            required
-          />
-        </Field>
-
-        <Field label="Perfil">
-          <select
-            value={form.roleId}
-            onChange={(e) => setForm((p) => ({ ...p, roleId: e.target.value }))}
-            style={inputStyle}
-            required
-          >
-            <option value="">Selecione o perfil</option>
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Departamento">
-          <select
-            value={form.departmentId}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, departmentId: e.target.value }))
-            }
-            style={inputStyle}
-          >
-            <option value="">Sem departamento</option>
-            {departments.map((department) => (
-              <option key={department.id} value={department.id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Estado">
-          <select
-            value={form.status}
-            onChange={(e) =>
-              setForm((p) => ({
-                ...p,
-                status: e.target.value as 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
-              }))
-            }
-            style={inputStyle}
-          >
-            <option value="ACTIVE">Ativo</option>
-            <option value="INACTIVE">Inativo</option>
-            <option value="SUSPENDED">Suspenso</option>
-          </select>
-        </Field>
-
-        {message ? (
-          <p style={{ color: 'red', margin: 0 }}>{message}</p>
-        ) : null}
-
-        <button type="submit" style={buttonStyle} disabled={saving}>
-          {saving ? 'A guardar...' : 'Criar profissional'}
-        </button>
-      </form>
     </div>
   );
 }
@@ -196,9 +199,30 @@ function Field({
   );
 }
 
+const pageStyle: React.CSSProperties = {
+  padding: 24,
+};
+
+const containerStyle: React.CSSProperties = {
+  maxWidth: 1000,
+  margin: '0 auto',
+  display: 'grid',
+  gap: 20,
+};
+
+const cardStyle: React.CSSProperties = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 16,
+  padding: 20,
+  display: 'grid',
+  gap: 16,
+  boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)',
+};
+
 const inputStyle: React.CSSProperties = {
-  padding: 10,
-  borderRadius: 8,
+  padding: 12,
+  borderRadius: 10,
   border: '1px solid #cbd5e1',
 };
 

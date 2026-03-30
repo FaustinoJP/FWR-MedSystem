@@ -1,45 +1,13 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEncounterDto } from './dto/create-encounter.dto';
 import { UpdateEncounterDto } from './dto/update-encounter.dto';
 
 @Injectable()
 export class EncountersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(appointmentId: string, dto: CreateEncounterDto) {
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { id: appointmentId },
-      include: { encounter: true },
-    });
-
-    if (!appointment) {
-      throw new NotFoundException('Consulta não encontrada');
-    }
-
-    if (appointment.encounter) {
-      throw new ConflictException('Atendimento clínico já registado para esta consulta');
-    }
-     const encounter = await this.prisma.encounter.create({
-      data: {
-        appointmentId,
-        status: 'OPEN',
-        chiefComplaint: dto.chiefComplaint,
-        historyOfPresentIllness: dto.historyOfPresentIllness,
-        physicalExam: dto.physicalExam,
-        assessment: dto.assessment,
-        plan: dto.plan,
-      },
-    });
-
-    await this.prisma.appointment.update({
-      where: { id: appointmentId },
-      data: { status: 'IN_CONSULTATION' as any },
-    });
-
-    return encounter;
-  }
-   async findByAppointment(appointmentId: string) {
+  async findOne(appointmentId: string) {
     const encounter = await this.prisma.encounter.findUnique({
       where: { appointmentId },
     });
@@ -49,6 +17,51 @@ export class EncountersService {
     }
 
     return encounter;
+  }
+
+  async create(appointmentId: string, dto: CreateEncounterDto) {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('Consulta não encontrada');
+    }
+
+    const existing = await this.prisma.encounter.findUnique({
+      where: { appointmentId },
+    });
+
+    if (existing) {
+      return this.prisma.encounter.update({
+        where: { appointmentId },
+        data: {
+          chiefComplaint: dto.chiefComplaint,
+          historyOfPresentIllness: dto.historyOfPresentIllness,
+          physicalExam: dto.physicalExam,
+          assessment: dto.assessment,
+          plan: dto.plan,
+          status: 'OPEN' as any,
+        },
+      });
+    }
+
+    await this.prisma.appointment.update({
+      where: { id: appointmentId },
+      data: { status: 'IN_CONSULTATION' as any },
+    });
+
+    return this.prisma.encounter.create({
+      data: {
+        appointmentId,
+        chiefComplaint: dto.chiefComplaint,
+        historyOfPresentIllness: dto.historyOfPresentIllness,
+        physicalExam: dto.physicalExam,
+        assessment: dto.assessment,
+        plan: dto.plan,
+        status: 'OPEN' as any,
+      },
+    });
   }
 
   async update(appointmentId: string, dto: UpdateEncounterDto) {
@@ -59,7 +72,8 @@ export class EncountersService {
     if (!encounter) {
       throw new NotFoundException('Atendimento clínico não encontrado');
     }
-   return this.prisma.encounter.update({
+
+    return this.prisma.encounter.update({
       where: { appointmentId },
       data: {
         chiefComplaint: dto.chiefComplaint,

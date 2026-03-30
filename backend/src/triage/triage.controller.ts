@@ -1,15 +1,24 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { TriageService } from './triage.service';
 import { CreateTriageDto } from './dto/create-triage.dto';
 import { UpdateTriageDto } from './dto/update-triage.dto';
-import { TriageService } from './triage.service';
 
-@UseGuards(JwtAuthGuard)
-@Controller('appointments/:appointmentId/triage')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('triage')
 export class TriageController {
   constructor(private readonly triageService: TriageService) {}
 
-  @Post()
+  @Get(':appointmentId')
+  @Roles('ADMIN', 'ENFERMEIRO', 'MEDICO')
+  findOne(@Param('appointmentId') appointmentId: string) {
+    return this.triageService.findOne(appointmentId);
+  }
+
+  @Post(':appointmentId')
+  @Roles('ADMIN', 'ENFERMEIRO', 'MEDICO')
   create(
     @Param('appointmentId') appointmentId: string,
     @Body() dto: CreateTriageDto,
@@ -17,12 +26,8 @@ export class TriageController {
     return this.triageService.create(appointmentId, dto);
   }
 
-  @Get()
-  findByAppointment(@Param('appointmentId') appointmentId: string) {
-    return this.triageService.findByAppointment(appointmentId);
-  }
-
-  @Patch()
+  @Patch(':appointmentId')
+  @Roles('ADMIN', 'ENFERMEIRO', 'MEDICO')
   update(
     @Param('appointmentId') appointmentId: string,
     @Body() dto: UpdateTriageDto,

@@ -37,56 +37,94 @@ export default function PatientDetailsPage() {
   }, [id]);
 
   if (loading) {
-    return <div style={{ padding: 24 }}>A carregar paciente...</div>;
+    return (
+      <div style={pageStyle}>
+        <div style={containerStyle}>
+          <div style={cardStyle}>A carregar paciente...</div>
+        </div>
+      </div>
+    );
   }
 
   if (error || !patient) {
     return (
-      <div style={{ padding: 24, color: 'crimson' }}>
-        {error || 'Paciente não encontrado'}
+      <div style={pageStyle}>
+        <div style={containerStyle}>
+          <div style={{ ...cardStyle, color: 'crimson' }}>
+            {error || 'Paciente não encontrado'}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24, display: 'grid', gap: 20 }}>
-      <div style={{ display: 'grid', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Link href="/dashboard" style={topNavLinkStyle}>
-            ← Dashboard
-          </Link>
-          <Link href="/patients" style={topNavLinkStyle}>
-            ← Pacientes
-          </Link>
+    <div style={pageStyle}>
+      <div style={containerStyle}>
+        <div style={headerStyle}>
+          <div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+              <Link href="/dashboard" style={topNavLinkStyle}>
+                ← Dashboard
+              </Link>
+              <Link href="/patients" style={topNavLinkStyle}>
+                ← Pacientes
+              </Link>
+            </div>
+
+            <h1 style={{ margin: 0 }}>
+              {patient.firstName} {patient.lastName}
+            </h1>
+            <p style={subtitleStyle}>
+              Código do paciente: {patient.patientCode}
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Link
+              href={`/appointments/new?patientId=${patient.id}`}
+              style={primaryButtonStyle}
+            >
+              Agendar consulta
+            </Link>
+          </div>
         </div>
 
-        <div>
-          <h1 style={{ margin: '12px 0 4px' }}>
-            {patient.firstName} {patient.lastName}
-          </h1>
-          <p style={{ margin: 0, color: '#64748b' }}>
-            Código do paciente: {patient.patientCode}
-          </p>
-        </div>
-      </div>
+        <section style={cardStyle}>
+          <div style={badgesRowStyle}>
+            <Badge label={`Sexo: ${patient.gender}`} />
+            <Badge label={`Grupo sanguíneo: ${patient.bloodGroup || '-'}`} />
+            <Badge label={`Nascimento: ${formatDate(patient.dateOfBirth)}`} />
+          </div>
+        </section>
 
+        <section style={cardStyle}>
+          <h2 style={{ margin: 0 }}>Dados do paciente</h2>
 
-      <section style={cardStyle}>
-        <div style={grid3}>
-          <Info label="Primeiro nome" value={patient.firstName} />
-          <Info label="Último nome" value={patient.lastName} />
-          <Info label="Sexo" value={patient.gender} />
-          <Info label="Nascimento" value={formatDate(patient.dateOfBirth)} />
-          <Info label="Telefone" value={patient.phone || '-'} />
-          <Info label="Grupo sanguíneo" value={patient.bloodGroup || '-'} />
-          <Info label="Registado em" value={formatDate(patient.createdAt)} />
-        </div>
-      </section>
+          <div style={infoGridStyle}>
+            <Info label="Primeiro nome" value={patient.firstName} />
+            <Info label="Último nome" value={patient.lastName} />
+            <Info label="Sexo" value={patient.gender} />
+            <Info label="Nascimento" value={formatDate(patient.dateOfBirth)} />
+            <Info label="Telefone" value={patient.phone || '-'} />
+            <Info label="Grupo sanguíneo" value={patient.bloodGroup || '-'} />
+            <Info label="Código" value={patient.patientCode} />
+            <Info label="Registado em" value={formatDate(patient.createdAt)} />
+          </div>
+        </section>
 
-      <div style={{ display: 'flex', gap: 12 }}>
-        <Link href={`/appointments/new?patientId=${patient.id}`} style={buttonLinkStyle}>
-          Agendar consulta
-        </Link>
+        <section style={cardStyle}>
+          <h2 style={{ margin: 0 }}>Ações rápidas</h2>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <Link
+              href={`/appointments/new?patientId=${patient.id}`}
+              style={primaryButtonStyle}
+            >
+              Agendar consulta
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -94,31 +132,95 @@ export default function PatientDetailsPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{label}</div>
+    <div style={infoCardStyle}>
+      <div style={labelStyle}>{label}</div>
       <div style={{ fontWeight: 600 }}>{value}</div>
     </div>
   );
 }
 
-const cardStyle: React.CSSProperties = {
-  background: 'white',
-  borderRadius: 12,
-  padding: 20,
+function Badge({ label }: { label: string }) {
+  return (
+    <span
+      style={{
+        padding: '6px 10px',
+        borderRadius: 999,
+        background: '#e2e8f0',
+        fontSize: 13,
+        fontWeight: 600,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+const pageStyle: React.CSSProperties = {
+  padding: 24,
 };
 
-const grid3: React.CSSProperties = {
+const containerStyle: React.CSSProperties = {
+  maxWidth: 1280,
+  margin: '0 auto',
   display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
+  gap: 20,
+};
+
+const headerStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 16,
+  flexWrap: 'wrap',
+};
+
+const subtitleStyle: React.CSSProperties = {
+  margin: '6px 0 0',
+  color: '#64748b',
+};
+
+const cardStyle: React.CSSProperties = {
+  background: 'white',
+  border: '1px solid #e2e8f0',
+  borderRadius: 16,
+  padding: 20,
+  display: 'grid',
+  gap: 16,
+  boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)',
+};
+
+const badgesRowStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: 12,
+  flexWrap: 'wrap',
+};
+
+const infoGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
   gap: 16,
 };
 
-const buttonLinkStyle: React.CSSProperties = {
-  padding: '12px 16px',
+const infoCardStyle: React.CSSProperties = {
+  border: '1px solid #e2e8f0',
+  borderRadius: 12,
+  padding: 14,
+  background: '#f8fafc',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: '#64748b',
+  marginBottom: 6,
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  padding: '10px 14px',
   borderRadius: 10,
   background: '#0f172a',
   color: 'white',
   textDecoration: 'none',
+  fontWeight: 600,
 };
 
 const topNavLinkStyle: React.CSSProperties = {

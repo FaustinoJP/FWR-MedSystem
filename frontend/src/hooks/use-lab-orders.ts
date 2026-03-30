@@ -1,20 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { labOrdersService } from '@/services/lab-orders.service';
-import type { CreateLabOrderPayload, LabOrder } from '@/types/lab-order';
+import {
+  labOrdersService,
+  type CreateLabOrderPayload,
+  type LabOrder,
+} from '@/services/lab-orders.service';
 
 export function useLabOrders(appointmentId: string) {
   const [data, setData] = useState<LabOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function load() {
-    if (!appointmentId) return;
+    if (!appointmentId) {
+      setData([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await labOrdersService.listByAppointment(appointmentId);
-      setData(result);
+      setData(Array.isArray(result) ? result : []);
       setError('');
     } catch (err: any) {
       setData([]);
@@ -30,7 +37,7 @@ export function useLabOrders(appointmentId: string) {
 
   async function create(payload: CreateLabOrderPayload) {
     const result = await labOrdersService.create(appointmentId, payload);
-    await load();
+    setData((prev) => [result, ...prev]);
     return result;
   }
 

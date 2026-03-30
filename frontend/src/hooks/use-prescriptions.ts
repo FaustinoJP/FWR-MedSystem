@@ -1,20 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { prescriptionsService } from '@/services/prescriptions.service';
-import type { CreatePrescriptionPayload, Prescription } from '@/types/prescription';
+import {
+  prescriptionsService,
+  type CreatePrescriptionPayload,
+  type Prescription,
+} from '@/services/prescriptions.service';
 
 export function usePrescriptions(appointmentId: string) {
   const [data, setData] = useState<Prescription[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function load() {
-    if (!appointmentId) return;
+    if (!appointmentId) {
+      setData([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await prescriptionsService.listByAppointment(appointmentId);
-      setData(result);
+      setData(Array.isArray(result) ? result : []);
       setError('');
     } catch (err: any) {
       setData([]);
@@ -30,7 +37,7 @@ export function usePrescriptions(appointmentId: string) {
 
   async function create(payload: CreatePrescriptionPayload) {
     const result = await prescriptionsService.create(appointmentId, payload);
-    await load();
+    setData((prev) => [result, ...prev]);
     return result;
   }
 

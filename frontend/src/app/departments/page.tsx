@@ -2,47 +2,21 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { staffService, StaffUser } from '@/services/staff.service';
+import { departmentsService, DepartmentItem } from '@/services/departments.service';
 
-function statusLabel(status: string) {
-  switch (status) {
-    case 'ACTIVE':
-      return 'Ativo';
-    case 'INACTIVE':
-      return 'Inativo';
-    case 'SUSPENDED':
-      return 'Suspenso';
-    default:
-      return status;
-  }
-}
-
-function statusColor(status: string) {
-  switch (status) {
-    case 'ACTIVE':
-      return '#16a34a';
-    case 'INACTIVE':
-      return '#6b7280';
-    case 'SUSPENDED':
-      return '#dc2626';
-    default:
-      return '#0f172a';
-  }
-}
-
-export default function StaffPage() {
-  const [items, setItems] = useState<StaffUser[]>([]);
+export default function DepartmentsPage() {
+  const [items, setItems] = useState<DepartmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    loadStaff();
+    loadDepartments();
   }, []);
 
-  async function loadStaff() {
+  async function loadDepartments() {
     try {
       setLoading(true);
-      const data = await staffService.list();
+      const data = await departmentsService.list();
       setItems(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
@@ -54,22 +28,8 @@ export default function StaffPage() {
 
   const filteredItems = useMemo(() => {
     const q = search.toLowerCase().trim();
-
-    return items.filter((item) => {
-      if (!q) return true;
-
-      const text = [
-        item.name,
-        item.email,
-        item.role?.name || '',
-        item.department?.name || '',
-        item.status,
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return text.includes(q);
-    });
+    if (!q) return items;
+    return items.filter((item) => item.name.toLowerCase().includes(q));
   }, [items, search]);
 
   return (
@@ -77,17 +37,17 @@ export default function StaffPage() {
       <div style={containerStyle}>
         <div style={headerStyle}>
           <div>
-            <h1 style={{ margin: 0 }}>Profissionais</h1>
+            <h1 style={{ margin: 0 }}>Departamentos / Especialidades</h1>
             <p style={subtitleStyle}>
-              Gestão de médicos, enfermeiros, rececionistas e faturação.
+              Gestão das áreas clínicas e especialidades do hospital.
             </p>
             <p style={{ margin: '8px 0 0' }}>
               <Link href="/dashboard">← Voltar ao dashboard</Link>
             </p>
           </div>
 
-          <Link href="/staff/new" style={primaryButtonStyle}>
-            + Novo profissional
+          <Link href="/departments/new" style={primaryButtonStyle}>
+            + Novo departamento
           </Link>
         </div>
 
@@ -96,7 +56,7 @@ export default function StaffPage() {
             <strong>Pesquisar</strong>
             <input
               type="text"
-              placeholder="Nome, email, perfil ou departamento"
+              placeholder="Nome do departamento"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={inputStyle}
@@ -106,19 +66,15 @@ export default function StaffPage() {
 
         <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
           {loading ? (
-            <div style={{ padding: 20 }}>A carregar profissionais...</div>
+            <div style={{ padding: 20 }}>A carregar departamentos...</div>
           ) : filteredItems.length === 0 ? (
-            <div style={{ padding: 20 }}>Nenhum profissional encontrado.</div>
+            <div style={{ padding: 20 }}>Nenhum departamento encontrado.</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={tableStyle}>
                 <thead>
                   <tr>
                     <th style={thStyle}>Nome</th>
-                    <th style={thStyle}>Email</th>
-                    <th style={thStyle}>Perfil</th>
-                    <th style={thStyle}>Departamento</th>
-                    <th style={thStyle}>Estado</th>
                     <th style={thStyle}>Ações</th>
                   </tr>
                 </thead>
@@ -126,25 +82,12 @@ export default function StaffPage() {
                   {filteredItems.map((item) => (
                     <tr key={item.id}>
                       <td style={tdStyle}>
-                        <Link href={`/staff/${item.id}`} style={nameLinkStyle}>
+                        <Link href={`/departments/${item.id}`} style={nameLinkStyle}>
                           {item.name}
                         </Link>
                       </td>
-                      <td style={tdStyle}>{item.email}</td>
-                      <td style={tdStyle}>{item.role?.name || '-'}</td>
-                      <td style={tdStyle}>{item.department?.name || '-'}</td>
                       <td style={tdStyle}>
-                        <span
-                          style={{
-                            color: statusColor(item.status),
-                            fontWeight: 700,
-                          }}
-                        >
-                          {statusLabel(item.status)}
-                        </span>
-                      </td>
-                      <td style={tdStyle}>
-                        <Link href={`/staff/${item.id}`} style={actionLinkStyle}>
+                        <Link href={`/departments/${item.id}`} style={actionLinkStyle}>
                           Ver / Editar
                         </Link>
                       </td>
@@ -224,7 +167,6 @@ const tdStyle: React.CSSProperties = {
   padding: 16,
   borderBottom: '1px solid #f1f5f9',
   fontSize: 15,
-  verticalAlign: 'middle',
 };
 
 const nameLinkStyle: React.CSSProperties = {

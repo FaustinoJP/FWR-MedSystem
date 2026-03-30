@@ -1,25 +1,29 @@
 import { request } from '@/lib/api';
-import type { CreateLabOrderPayload, LabOrder } from '@/types/lab-order';
+
+export type LabOrder = {
+  id: string;
+  appointmentId: string;
+  testName: string;
+  category?: string | null;
+  notes?: string | null;
+  status: string;
+  createdAt?: string;
+};
+
+export type CreateLabOrderPayload = {
+  testName: string;
+  category?: string;
+  notes?: string;
+};
 
 export const labOrdersService = {
   listByAppointment(appointmentId: string) {
-    return request<LabOrder[]>(`/appointments/${appointmentId}/lab-orders`);
+    return request<LabOrder[]>(`/lab-orders/${appointmentId}`);
   },
 
   create(appointmentId: string, payload: CreateLabOrderPayload) {
-    return request<LabOrder>(`/appointments/${appointmentId}/lab-orders`, {
+    return request<LabOrder>(`/lab-orders/${appointmentId}`, {
       method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  },
-
-  getById(id: string) {
-    return request<LabOrder>(`/lab-orders/${id}`);
-  },
-
-  update(id: string, payload: Partial<CreateLabOrderPayload>) {
-    return request<LabOrder>(`/lab-orders/${id}`, {
-      method: 'PATCH',
       body: JSON.stringify(payload),
     });
   },

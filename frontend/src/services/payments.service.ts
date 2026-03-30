@@ -3,18 +3,18 @@ import type { CreatePaymentPayload, Payment } from '@/types/payment';
 
 export const paymentsService = {
   listByInvoice(invoiceId: string) {
-    return request<Payment[]>(`/invoices/${invoiceId}/payments`);
+    return request<Payment[]>(`/billing/payments/${invoiceId}`);
   },
 
   create(invoiceId: string, payload: CreatePaymentPayload) {
-    return request<Payment>(`/invoices/${invoiceId}/payments`, {
+    return request<Payment>(`/billing/payments/${invoiceId}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
   },
 
-  updateStatus(id: string, status: string) {
-    return request<Payment>(`/payments/${id}/status`, {
+  updateStatus(paymentId: string, status: string) {
+    return request<Payment>(`/billing/payments/${paymentId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });

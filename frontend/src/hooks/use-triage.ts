@@ -1,16 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { triageService } from '@/services/triage.service';
-import type { CreateTriagePayload } from '@/types/triage';
+import { triageService, type CreateTriagePayload, type Triage } from '@/services/triage.service';
 
 export function useTriage(appointmentId: string) {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<Triage | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function load() {
-    if (!appointmentId) return;
+    if (!appointmentId) {
+      setData(null);
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await triageService.getByAppointment(appointmentId);
@@ -34,11 +37,18 @@ export function useTriage(appointmentId: string) {
     return result;
   }
 
-  async function update(payload: CreateTriagePayload) {
+  async function update(payload: Partial<CreateTriagePayload>) {
     const result = await triageService.update(appointmentId, payload);
     setData(result);
     return result;
   }
 
-  return { data, loading, error, create, update, refetch: load };
+  return {
+    data,
+    loading,
+    error,
+    create,
+    update,
+    refetch: load,
+  };
 }

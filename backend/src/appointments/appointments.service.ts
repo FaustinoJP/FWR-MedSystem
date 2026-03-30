@@ -25,7 +25,8 @@ export class AppointmentsService {
     });
   }
 
-  findAll(filters: { search?: string; status?: string; date?: string }) {
+  async findAll(filters: { search?: string; status?: string; date?: string }) {
+   await this.markExpiredAppointmentsAsNoShow();
     const where: any = {};
 
     if (filters.search) {
@@ -64,6 +65,24 @@ export class AppointmentsService {
         encounter: true,
       },
       orderBy: { appointmentDate: 'asc' },
+    });
+  }
+
+    async markExpiredAppointmentsAsNoShow() {
+    const now = new Date();
+
+    await this.prisma.appointment.updateMany({
+      where: {
+        appointmentDate: {
+          lt: now,
+        },
+        status: {
+          in: ['SCHEDULED', 'CHECKED_IN'],
+        },
+      },
+      data: {
+        status: 'NO_SHOW',
+      },
     });
   }
 
