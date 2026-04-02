@@ -248,14 +248,48 @@ async function main() {
   // =========================
   // LAB TEST TYPES
   // =========================
-  await prisma.labTestType.createMany({
+  /*await prisma.labTestType.createMany({
     data: [
       { name: 'Hemograma Completo', category: 'Hematologia' },
       { name: 'Glicemia', category: 'Bioquímica' },
       { name: 'Urina II', category: 'Urinálise' },
     ],
     skipDuplicates: true,
+  });*/
+   //=========================
+  // Seed para ExamType (exemplos de exames)
+  // =========================
+    
+    console.log('🌡️  Seeding Exam Types...');
+      await prisma.examType.createMany({
+        data: [
+         {
+            name: 'Hemograma Completo',
+            code: 'HEMO001',
+            description: 'Avaliação completa das células sanguíneas',
+            price: 12.50,
+            department: 'Hematologia',
+            category: 'Hematologia',
+          },
+          {
+            name: 'Glicemia em Jejum',
+            code: 'GLIC001',
+            description: 'Medição de glicose após jejum',
+            price: 8.00,
+            department: 'Bioquímica',
+            category: 'Bioquímica',
+          },
+          {
+            name: 'Colesterol Total e Frações',
+            code: 'COLE001',
+            price: 15.00,
+            department: 'Bioquímica',
+            category: 'Bioquímica',
+          },
+          ],
+          skipDuplicates: true,
   });
+
 
   // =========================
   // PAYMENT METHODS
@@ -480,7 +514,7 @@ async function main() {
   // =========================
   // LAB ORDERS
   // =========================
-  if (appointment) {
+  /*if (appointment) {
     const existingLab1 = await prisma.labOrder.findFirst({
       where: {
         appointmentId: appointment.id,
@@ -518,7 +552,9 @@ async function main() {
         },
       });
     }
-  }
+  }*/
+
+    
 
   // =========================
   // INVOICE
