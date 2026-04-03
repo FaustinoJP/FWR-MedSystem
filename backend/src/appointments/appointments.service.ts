@@ -1,19 +1,44 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { AppointmentStatus } from '@prisma/client';
 
 @Injectable()
 export class AppointmentsService {
+  /*complete(id: string) {
+    throw new Error('Method not implemented.');
+  }*/
   constructor(private prisma: PrismaService) {}
 
-  create(dto: CreateAppointmentDto) {
+  // ======================
+  // CREATE
+  // ======================
+  async create(dto: CreateAppointmentDto) {
     return this.prisma.appointment.create({
+      data: dto,
+      include: {
+        patient: true,
+        doctor: true,
+        department: true,
+      },
+    });
+  }
+
+    async complete(id: string) {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id },
+      include: { patient: true, doctor: true },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment não encontrado');
+    }
+
+    // Atualiza o estado para COMPLETED
+    const updated = await this.prisma.appointment.update({
+      where: { id },
       data: {
-        patientId: dto.patientId,
-        doctorId: dto.doctorId,
-        departmentId: dto.departmentId,
-        appointmentDate: new Date(dto.appointmentDate),
-        reason: dto.reason,
+        status: AppointmentStatus.COMPLETED,
       },
       include: {
         patient: true,
@@ -21,68 +46,36 @@ export class AppointmentsService {
         department: true,
         triage: true,
         encounter: true,
+        prescriptions: true,
+        examRequests: {
+          include: { examType: true },
+        },
       },
     });
+
+    return updated;
   }
 
-  async findAll(filters: { search?: string; status?: string; date?: string }) {
-   await this.markExpiredAppointmentsAsNoShow();
-    const where: any = {};
-
-    if (filters.search) {
-      where.OR = [
-        {
-          patient: {
-            firstName: { contains: filters.search, mode: 'insensitive' },
-          },
-        },
-        {
-          patient: {
-            lastName: { contains: filters.search, mode: 'insensitive' },
-          },
-        },
-      ];
-    }
-
-    if (filters.status) {
-      where.status = filters.status;
-    }
-
-    if (filters.date) {
-      where.appointmentDate = {
-        gte: new Date(`${filters.date}T00:00:00.000Z`),
-        lte: new Date(`${filters.date}T23:59:59.999Z`),
-      };
-    }
-
+  // ======================
+  // READ
+  // ======================
+  async findAll() {
     return this.prisma.appointment.findMany({
-      where,
       include: {
         patient: true,
         doctor: true,
         department: true,
         triage: true,
         encounter: true,
-      },
-      orderBy: { appointmentDate: 'asc' },
-    });
-  }
-
-    async markExpiredAppointmentsAsNoShow() {
-    const now = new Date();
-
-    await this.prisma.appointment.updateMany({
-      where: {
-        appointmentDate: {
-          lt: now,
-        },
-        status: {
-          in: ['SCHEDULED', 'CHECKED_IN'],
+        prescriptions: true,
+        examRequests: {
+          include: {
+            examType: true,
+          },
+          orderBy: { requestedAt: 'desc' },
         },
       },
-      data: {
-        status: 'NO_SHOW',
-      },
+      orderBy: { appointmentDate: 'desc' },
     });
   }
 
@@ -90,69 +83,73 @@ export class AppointmentsService {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
       include: {
-         patient: true,
-         doctor: true,
-         department: true,
-         Invoice: true,
-         triage: true,
-         encounter: true,
-         prescriptions: true,
-         labOrders: true,
+        patient: true,
+        doctor: true,
+        department: true,
+        triage: true,
+        encounter: true,
+        prescriptions: true,
+        examRequests: {
+          include: {
+            examType: true,
+          },
+          orderBy: { requestedAt: 'desc' },
+        },
       },
     });
 
     if (!appointment) {
-      throw new NotFoundException('Consulta não encontrada');
+      throw new NotFoundException('Appointment não encontrado');
     }
 
     return appointment;
   }
 
-  updateStatus(id: string, status: string) {
+
+    // ======================
+  // UPDATE STATUS
+  // ======================
+  async updateStatus(id: string, status: string) {
+    const allowedStatuses: AppointmentStatus[] = [
+      'SCHEDULED',
+      'CHECKED_IN',
+      'IN_TRIAGE',
+      'IN_CONSULTATION',
+      'COMPLETED',
+      'CANCELLED',
+      'NO_SHOW'
+    ];
+
+    if (!allowedStatuses.includes(status as AppointmentStatus)) {
+      throw new BadRequestException(
+        `Status inválido. Valores permitidos: ${allowedStatuses.join(', ')}`
+      );
+    }
+
     return this.prisma.appointment.update({
       where: { id },
-      data: { status: status as any },
-    });
-  }
-
-  async complete(id: string) {
-  const appointment = await this.prisma.appointment.findUnique({
-    where: { id },
-    include: {
-      encounter: true,
-    },
-  });
-
-  if (!appointment) {
-    throw new NotFoundException('Consulta não encontrada');
-  }
-
-  if (appointment.encounter) {
-    await this.prisma.encounter.update({
-      where: { appointmentId: id },
-      data: {
-        status: 'CLOSED',
+      data: { 
+        status: status as AppointmentStatus   // ← Cast explícito para o enum
+      },
+      include: {
+        patient: true,
+        doctor: true,
+        department: true,
+        examRequests: {
+          include: {
+            examType: true,
+          },
+        },
       },
     });
   }
-
-  return this.prisma.appointment.update({
-    where: { id },
-    data: {
-      status: 'COMPLETED',
-    },
-    include: {
-      patient: true,
-      doctor: true,
-      department: true,
-      Invoice: true,
-      triage: true,
-      encounter: true,
-      prescriptions: true,
-      labOrders: true,
-    },
-  });
+  // ======================
+  // REMOVE (soft delete por agora)
+  // ======================
+  async remove(id: string) {
+    return this.prisma.appointment.update({
+      where: { id },
+      data: { status: 'CANCELLED' },
+    });
+  }
 }
-
-}
-

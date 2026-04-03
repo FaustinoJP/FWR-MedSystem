@@ -248,15 +248,107 @@ async function main() {
   // =========================
   // LAB TEST TYPES
   // =========================
-  await prisma.labTestType.createMany({
+  /*await prisma.labTestType.createMany({
     data: [
       { name: 'Hemograma Completo', category: 'Hematologia' },
       { name: 'Glicemia', category: 'Bioquímica' },
       { name: 'Urina II', category: 'Urinálise' },
     ],
     skipDuplicates: true,
+  });*/
+   
+  // ======================
+  // SEED PARA MÓDULO DE LABORATÓRIO
+  // ======================
+  console.log('🌡️  Seeding Exam Types and Exam Requests...');
+
+  // 1. Criar Tipos de Exames (ExamType)
+  const examTypeData = [
+    {
+      name: 'Hemograma Completo',
+      code: 'HEMO001',
+      description: 'Avaliação completa das células sanguíneas',
+      price: 12.50,
+      department: 'Hematologia',
+      category: 'Hematologia',
+    },
+    {
+      name: 'Glicemia em Jejum',
+      code: 'GLIC001',
+      description: 'Medição de glicose após 8h de jejum',
+      price: 8.00,
+      department: 'Bioquímica',
+      category: 'Bioquímica',
+    },
+    {
+      name: 'Colesterol Total e Frações',
+      code: 'COLE001',
+      description: 'Perfil lipídico completo',
+      price: 15.00,
+      department: 'Bioquímica',
+      category: 'Bioquímica',
+    },
+    {
+      name: 'TSH - Hormona Tireoestimulante',
+      code: 'TSH001',
+      description: 'Avaliação da função da tiroide',
+      price: 18.50,
+      department: 'Endocrinologia',
+      category: 'Hormonas',
+    },
+  ];
+
+  const createdExamTypes = await prisma.examType.createMany({
+    data: examTypeData,
+    skipDuplicates: true,
   });
 
+  console.log(`✅ ${createdExamTypes.count} tipos de exame criados.`);
+
+  // Buscar os ExamTypes criados para obter os IDs reais
+  const examTypes = await prisma.examType.findMany({
+    where: { code: { in: ['HEMO001', 'GLIC001', 'COLE001', 'TSH001'] } },
+  });
+
+  // 2. Criar pedidos de exame para appointments existentes
+  const appointments = await prisma.appointment.findMany({
+    take: 6,
+    select: { id: true, doctorId: true },
+  });
+
+  let examRequestCount = 0;
+
+  for (const appointment of appointments) {
+    // Hemograma para todas
+    if (examTypes[0]) {
+      await prisma.examRequest.create({
+        data: {
+          appointmentId: appointment.id,
+          examTypeId: examTypes[0].id,
+          priority: 'NORMAL',
+          requestedBy: appointment.doctorId,
+          notes: 'Solicitado para avaliação geral',
+        },
+      });
+      examRequestCount++;
+    }
+
+    // Glicemia para algumas (50% de chance)
+    if (examTypes[1] && Math.random() > 0.5) {
+      await prisma.examRequest.create({
+        data: {
+          appointmentId: appointment.id,
+          examTypeId: examTypes[1].id,
+          priority: 'NORMAL',
+          requestedBy: appointment.doctorId,
+          notes: 'Paciente refere fadiga e sede excessiva',
+        },
+      });
+      examRequestCount++;
+    }
+  }
+
+  console.log(`✅ ${examRequestCount} pedidos de exame criados.`);
   // =========================
   // PAYMENT METHODS
   // =========================
@@ -480,7 +572,7 @@ async function main() {
   // =========================
   // LAB ORDERS
   // =========================
-  if (appointment) {
+  /*if (appointment) {
     const existingLab1 = await prisma.labOrder.findFirst({
       where: {
         appointmentId: appointment.id,
@@ -518,7 +610,9 @@ async function main() {
         },
       });
     }
-  }
+  }*/
+
+    
 
   // =========================
   // INVOICE

@@ -31,3 +31,5 @@ cp .env.local.example .env.local
 npm install
 npm run dev
 ```
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "medsystem", schema "public" at "localhost:5432"

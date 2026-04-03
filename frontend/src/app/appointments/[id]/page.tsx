@@ -27,6 +27,12 @@ import { usePayments } from '@/hooks/use-payments';
 import { usePaymentMethods } from '@/hooks/use-payment-methods';
 import { useCompleteAppointment } from '@/hooks/use-complete-appointment';
 
+/*  const [labOrderForm, setLabOrderForm] = useState({
+    examTypeId: '',
+    priority: 'NORMAL' as 'LOW' | 'NORMAL' | 'URGENT',
+    notes: '',
+  });*/
+
 function formatDate(value?: string | null) {
   if (!value) return '-';
   return new Date(value).toLocaleString('pt-PT');
@@ -91,6 +97,23 @@ export default function AppointmentDetailsPage() {
     const user = getCurrentUser();
     setCurrentUser(user);
     setAuthReady(true);
+  }, []);
+
+    // Carregar catálogo de exames
+  useEffect(() => {
+    const loadExamTypes = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000/api/v1';
+        const res = await fetch(`${baseUrl}/lab/exam-types`);
+        if (res.ok) {
+          const data = await res.json();
+          setExamTypes(data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar tipos de exame:', error);
+      }
+    };
+    loadExamTypes();
   }, []);
 
   const role = currentUser?.role;
@@ -169,9 +192,10 @@ export default function AppointmentDetailsPage() {
     instructions: '',
   });
 
+  const [examTypes, setExamTypes] = useState<any[]>([]);
   const [labOrderForm, setLabOrderForm] = useState({
-    testName: '',
-    category: '',
+    examTypeId: '',
+    priority: 'NORMAL' as 'LOW' | 'NORMAL' | 'URGENT',
     notes: '',
   });
 
@@ -311,29 +335,38 @@ export default function AppointmentDetailsPage() {
     }
   }
 
-  async function submitLabOrder(e: React.FormEvent) {
+    async function submitLabOrder(e: React.FormEvent) {
     e.preventDefault();
+    if (!labOrderForm.examTypeId) return;
+
     setSavingLabOrder(true);
     setLabOrderMessage('');
 
     try {
-      await labOrdersQuery.create({
-        testName: labOrderForm.testName,
-        category: labOrderForm.category || undefined,
-        notes: labOrderForm.notes || undefined,
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000/api/v1';
+
+      const res = await fetch(`${baseUrl}/lab/exam-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appointmentId,
+          examTypeId: labOrderForm.examTypeId,
+          priority: labOrderForm.priority,
+          notes: labOrderForm.notes || undefined,
+          requestedBy: currentUser?.id || currentUser?.email || 'SYSTEM',
+        }),
       });
 
-      setLabOrderMessage('Pedido laboratorial criado com sucesso.');
-      setLabOrderForm({
-        testName: '',
-        category: '',
-        notes: '',
-      });
+      if (!res.ok) throw new Error('Erro ao solicitar exame');
 
-      await appointmentQuery.refetch();
+      setLabOrderMessage('✅ Exame solicitado com sucesso!');
+      setLabOrderForm({ examTypeId: '', priority: 'NORMAL', notes: '' });
+
       await labOrdersQuery.refetch();
+      await appointmentQuery.refetch();
+
     } catch (err: any) {
-      setLabOrderMessage(err.message || 'Erro ao guardar exame');
+      setLabOrderMessage('❌ ' + (err.message || 'Erro ao guardar exame'));
     } finally {
       setSavingLabOrder(false);
     }
@@ -768,75 +801,99 @@ export default function AppointmentDetailsPage() {
         )}
 
         {tab === 'lab-orders' && (
-          <section style={cardStyle}>
-            <div>
-              <h3 style={sectionTitleStyle}>Exames laboratoriais</h3>
-              <p style={{ ...muted, marginTop: 4 }}>Registe os exames solicitados nesta consulta.</p>
+  <section style={cardStyle}>
+    <div>
+      <h3 style={sectionTitleStyle}>Exames Laboratoriais</h3>
+      <p style={{ ...muted, marginTop: 4 }}>Registe os exames solicitados nesta consulta usando o catálogo oficial.</p>
+    </div>
+
+    {isClinicalLocked ? <ConsultationLockedMessage status={appointment?.status} /> : null}
+    {authReady && !canEditLabOrders(role) ? <ReadOnlyMessage /> : null}
+
+    {/* ====================== FORMULÁRIO NOVO ====================== */}
+    <form onSubmit={submitLabOrder} style={formGridStyle}>
+      <div style={grid2}>
+        <Field label="Tipo de Exame">
+          <select
+            value={labOrderForm.examTypeId}
+            onChange={(e) => setLabOrderForm((p) => ({ ...p, examTypeId: e.target.value }))}
+            style={inputStyle}
+            required
+          >
+            <option value="">Selecione um exame do catálogo</option>
+            {examTypes.map((ex: any) => (
+              <option key={ex.id} value={ex.id}>
+                {ex.name} ({ex.code}) — {ex.department}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Prioridade">
+          <select
+            value={labOrderForm.priority}
+            onChange={(e) => setLabOrderForm((p) => ({ ...p, priority: e.target.value as any }))}
+            style={inputStyle}
+          >
+            <option value="NORMAL">Normal</option>
+            <option value="URGENT">Urgente</option>
+            <option value="LOW">Baixa</option>
+          </select>
+        </Field>
+      </div>
+
+      <Field label="Notas / Observações">
+        <textarea
+          value={labOrderForm.notes}
+          onChange={(e) => setLabOrderForm((p) => ({ ...p, notes: e.target.value }))}
+          style={textareaStyle}
+          placeholder="Ex.: Urgente - suspeita de anemia"
+        />
+      </Field>
+
+      {labOrderMessage && (
+        <p style={{ color: labOrderMessage.includes('✅') ? 'green' : 'crimson', margin: 0 }}>
+          {labOrderMessage}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        style={buttonStyle}
+        disabled={savingLabOrder || isClinicalLocked || !canEditLabOrders(role)}
+      >
+        {savingLabOrder ? 'A solicitar...' : 'Solicitar Exame'}
+      </button>
+    </form>
+
+    {/* ====================== LISTA DE EXAMES ====================== */}
+    <div style={{ display: 'grid', gap: 12, marginTop: 24 }}>
+      <div>
+        <h4 style={{ marginBottom: 4 }}>Exames solicitados nesta consulta</h4>
+        <p style={muted}>Lista de exames laboratoriais já registados.</p>
+      </div>
+
+      {labOrdersQuery.loading ? (
+        <p style={muted}>A carregar exames...</p>
+      ) : labOrders.length === 0 ? (
+        <div style={emptyStateStyle}>Nenhum exame solicitado ainda.</div>
+      ) : (
+        labOrders.map((item: any) => (
+          <CardItem key={item.id}>
+            <div style={cardHeaderStyle}>
+              <strong style={{ fontSize: 16 }}>{item.examType?.name || item.testName}</strong>
+              <span style={pillStyle}>{item.priority || item.status}</span>
             </div>
-
-            {isClinicalLocked ? <ConsultationLockedMessage status={appointment?.status} /> : null}
-            {authReady && !canEditLabOrders(role) ? <ReadOnlyMessage /> : null}
-
-            <form onSubmit={submitLabOrder} style={formGridStyle}>
-              <div style={grid2}>
-                <Field label="Exame">
-                  <input value={labOrderForm.testName} onChange={(e) => setLabOrderForm((p) => ({ ...p, testName: e.target.value }))} placeholder="Ex.: Hemograma Completo" style={inputStyle} />
-                </Field>
-
-                <Field label="Categoria">
-                  <input value={labOrderForm.category} onChange={(e) => setLabOrderForm((p) => ({ ...p, category: e.target.value }))} placeholder="Ex.: Hematologia" style={inputStyle} />
-                </Field>
-              </div>
-
-              <Field label="Notas">
-                <textarea value={labOrderForm.notes} onChange={(e) => setLabOrderForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Ex.: Urgente" style={textareaStyle} />
-              </Field>
-
-              {labOrderMessage ? <p style={{ color: labOrderMessage.includes('sucesso') ? 'green' : 'crimson', margin: 0 }}>{labOrderMessage}</p> : null}
-
-              <div>
-                <button
-                  type="submit"
-                  style={buttonStyle}
-                  disabled={savingLabOrder || isClinicalLocked || !canEditLabOrders(role)}
-                >
-                  {savingLabOrder
-                    ? 'A guardar...'
-                    : isCompleted
-                    ? 'Consulta encerrada'
-                    : !canEditLabOrders(role)
-                    ? 'Sem permissão'
-                    : 'Guardar exame'}
-                </button>
-              </div>
-            </form>
-
-            <div style={{ display: 'grid', gap: 12 }}>
-              <div>
-                <h4 style={{ marginBottom: 4 }}>Lista de exames</h4>
-                <p style={muted}>Exames laboratoriais já registados nesta consulta.</p>
-              </div>
-
-              {labOrdersQuery.loading ? (
-                <p style={muted}>A carregar exames...</p>
-              ) : labOrders.length === 0 ? (
-                <div style={emptyStateStyle}>Nenhum exame registado.</div>
-              ) : (
-                labOrders.map((item) => (
-                  <CardItem key={item.id}>
-                    <div style={cardHeaderStyle}>
-                      <strong style={{ fontSize: 16 }}>{item.testName}</strong>
-                      <span style={pillStyle}>{item.status}</span>
-                    </div>
-                    <div>Categoria: {item.category || '-'}</div>
-                    <div><strong>Notas:</strong> {item.notes || '-'}</div>
-                    <div style={smallMuted}>Criado em: {formatDate(item.createdAt)}</div>
-                  </CardItem>
-                ))
-              )}
+            {item.notes && <div><strong>Notas:</strong> {item.notes}</div>}
+            <div style={smallMuted}>
+              Solicitado em: {formatDate(item.requestedAt || item.createdAt)}
             </div>
-          </section>
-        )}
+          </CardItem>
+        ))
+      )}
+    </div>
+  </section>
+)}
 
         {tab === 'billing' && (
           <section style={cardStyle}>

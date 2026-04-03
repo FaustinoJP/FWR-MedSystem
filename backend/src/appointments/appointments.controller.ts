@@ -1,46 +1,39 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
+import { Controller, Get, Post, Body, Patch, Param, Query } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
-import { UpdateStatusDto } from './dto/update-status.dto';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('appointments')
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}
 
   @Post()
-  @Roles('ADMIN', 'RECEPCIONISTA')
-  create(@Body() dto: CreateAppointmentDto) {
-    return this.appointmentsService.create(dto);
+  @Roles(Role.RECEPTIONIST, Role.ADMIN, Role.DOCTOR)
+  create(@Body() createAppointmentDto: CreateAppointmentDto) {
+    return this.appointmentsService.create(createAppointmentDto);
   }
 
   @Get()
-  @Roles('ADMIN', 'RECEPCIONISTA', 'MEDICO', 'ENFERMEIRO', 'FATURACAO')
-  findAll(
-    @Query('search') search?: string,
-    @Query('status') status?: string,
-    @Query('date') date?: string,
-  ) {
-    return this.appointmentsService.findAll({ search, status, date });
+  @Roles(Role.RECEPTIONIST, Role.ADMIN, Role.DOCTOR, Role.NURSE)
+  findAll() {
+    return this.appointmentsService.findAll();
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'RECEPCIONISTA', 'MEDICO', 'ENFERMEIRO', 'FATURACAO')
+  @Roles(Role.RECEPTIONIST, Role.ADMIN, Role.DOCTOR, Role.NURSE)
   findOne(@Param('id') id: string) {
     return this.appointmentsService.findOne(id);
   }
 
   @Patch(':id/status')
-  @Roles('ADMIN', 'RECEPCIONISTA', 'ENFERMEIRO', 'MEDICO')
-  updateStatus(@Param('id') id: string, @Body() dto: UpdateStatusDto) {
-    return this.appointmentsService.updateStatus(id, dto.status);
+  @Roles(Role.RECEPTIONIST, Role.ADMIN, Role.DOCTOR, Role.NURSE)
+  updateStatus(@Param('id') id: string, @Body('status') status: string) {
+    return this.appointmentsService.updateStatus(id, status);
   }
 
-  @Patch(':id/complete')
-  @Roles('ADMIN', 'MEDICO')
+    @Patch(':id/complete')
+  @Roles(Role.DOCTOR, Role.ADMIN)
   complete(@Param('id') id: string) {
     return this.appointmentsService.complete(id);
   }
