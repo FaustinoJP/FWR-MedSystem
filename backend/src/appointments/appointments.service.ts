@@ -1,25 +1,65 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAppointmentDto, /* teus DTOs */ } from './dto/create-appointment.dto';
+import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { AppointmentStatus } from '@prisma/client';
 
 @Injectable()
 export class AppointmentsService {
-  remove(id: string) {
+  /*complete(id: string) {
     throw new Error('Method not implemented.');
-  }
-  complete // Mantém os outros métodos (create, update, etc.) como estão
-    (id: string) {
-      throw new Error('Method not implemented.');
-  }
-  updateStatus(id: string, status: string) {
-    throw new Error('Method not implemented.');
-  }
-  create(dto: CreateAppointmentDto) {
-    throw new Error('Method not implemented.');
-  }
+  }*/
   constructor(private prisma: PrismaService) {}
 
- async findAll() {
+  // ======================
+  // CREATE
+  // ======================
+  async create(dto: CreateAppointmentDto) {
+    return this.prisma.appointment.create({
+      data: dto,
+      include: {
+        patient: true,
+        doctor: true,
+        department: true,
+      },
+    });
+  }
+
+    async complete(id: string) {
+    const appointment = await this.prisma.appointment.findUnique({
+      where: { id },
+      include: { patient: true, doctor: true },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('Appointment não encontrado');
+    }
+
+    // Atualiza o estado para COMPLETED
+    const updated = await this.prisma.appointment.update({
+      where: { id },
+      data: {
+        status: AppointmentStatus.COMPLETED,
+      },
+      include: {
+        patient: true,
+        doctor: true,
+        department: true,
+        triage: true,
+        encounter: true,
+        prescriptions: true,
+        examRequests: {
+          include: { examType: true },
+        },
+      },
+    });
+
+    return updated;
+  }
+
+  // ======================
+  // READ
+  // ======================
+  async findAll() {
     return this.prisma.appointment.findMany({
       include: {
         patient: true,
@@ -28,7 +68,7 @@ export class AppointmentsService {
         triage: true,
         encounter: true,
         prescriptions: true,
-        examRequests: {                    // ← Adicionado
+        examRequests: {
           include: {
             examType: true,
           },
@@ -49,7 +89,7 @@ export class AppointmentsService {
         triage: true,
         encounter: true,
         prescriptions: true,
-        examRequests: {          // ← Adicionado
+        examRequests: {
           include: {
             examType: true,
           },
@@ -65,6 +105,51 @@ export class AppointmentsService {
     return appointment;
   }
 
-  // Mantém os outros métodos (create, update, etc.) como estão
-  // Apenas adiciona o include acima onde faz sentido mostrar os exames
+
+    // ======================
+  // UPDATE STATUS
+  // ======================
+  async updateStatus(id: string, status: string) {
+    const allowedStatuses: AppointmentStatus[] = [
+      'SCHEDULED',
+      'CHECKED_IN',
+      'IN_TRIAGE',
+      'IN_CONSULTATION',
+      'COMPLETED',
+      'CANCELLED',
+      'NO_SHOW'
+    ];
+
+    if (!allowedStatuses.includes(status as AppointmentStatus)) {
+      throw new BadRequestException(
+        `Status inválido. Valores permitidos: ${allowedStatuses.join(', ')}`
+      );
+    }
+
+    return this.prisma.appointment.update({
+      where: { id },
+      data: { 
+        status: status as AppointmentStatus   // ← Cast explícito para o enum
+      },
+      include: {
+        patient: true,
+        doctor: true,
+        department: true,
+        examRequests: {
+          include: {
+            examType: true,
+          },
+        },
+      },
+    });
+  }
+  // ======================
+  // REMOVE (soft delete por agora)
+  // ======================
+  async remove(id: string) {
+    return this.prisma.appointment.update({
+      where: { id },
+      data: { status: 'CANCELLED' },
+    });
+  }
 }

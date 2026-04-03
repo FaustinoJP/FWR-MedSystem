@@ -3,26 +3,37 @@ import { request } from '@/lib/api';
 export type LabOrder = {
   id: string;
   appointmentId: string;
-  testName: string;
-  category?: string | null;
-  notes?: string | null;
+  examTypeId: string;
+  examType?: {
+    id: string;
+    name: string;
+    code: string;
+    department: string;
+    category?: string;
+  };
+  priority: 'LOW' | 'NORMAL' | 'URGENT';
   status: string;
-  createdAt?: string;
+  notes?: string | null;
+  requestedAt?: string;
+  createdAt: string;
+  requestedBy?: string;
 };
 
 export type CreateLabOrderPayload = {
-  testName: string;
-  category?: string;
+  examTypeId: string;
+  priority?: 'LOW' | 'NORMAL' | 'URGENT';
   notes?: string;
 };
 
 export const labOrdersService = {
+  // Lista exames por appointment (nova rota)
   listByAppointment(appointmentId: string) {
-    return request<LabOrder[]>(`/lab-orders/${appointmentId}`);
+    return request<LabOrder[]>(`/lab/exam-requests?appointmentId=${appointmentId}`);
   },
 
-  create(appointmentId: string, payload: CreateLabOrderPayload) {
-    return request<LabOrder>(`/lab-orders/${appointmentId}`, {
+  // Cria novo exame (nova rota)
+  create(payload: CreateLabOrderPayload & { appointmentId: string }) {
+    return request<LabOrder>('/lab/exam-requests', {
       method: 'POST',
       body: JSON.stringify(payload),
     });

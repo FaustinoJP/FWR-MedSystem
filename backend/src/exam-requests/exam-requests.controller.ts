@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Req, Query } from '@nestjs/common';
 import { ExamRequestsService } from './exam-requests.service';
 import { CreateExamRequestDto } from './dto/create-exam-request.dto';
-import {  AddResultDto } from './dto/add-result.dto';
+import { AddResultDto } from './dto/add-result.dto';
 import { UpdateExamRequestDto } from './dto/update-exam-request.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../auth/enums/role.enum';
@@ -11,17 +11,23 @@ export class ExamRequestsController {
   constructor(private readonly examRequestsService: ExamRequestsService) {}
 
   @Post()
-  @Roles(Role.DOCTOR, Role.ADMIN)
+  @Roles(Role.DOCTOR, Role.ADMIN, Role.NURSE)
   create(@Body() createExamRequestDto: CreateExamRequestDto) {
     return this.examRequestsService.create(createExamRequestDto);
   }
 
-  @Get('appointment/:appointmentId')
-  findAllByAppointment(@Param('appointmentId') appointmentId: string) {
-    return this.examRequestsService.findAllByAppointment(appointmentId);
+  // ← Esta é a rota que o frontend precisa (com query parameter)
+  @Get()
+  @Roles(Role.DOCTOR, Role.ADMIN, Role.NURSE, Role.LABORATORISTA)
+  findAllByAppointment(@Query('appointmentId') appointmentId?: string) {
+    if (appointmentId) {
+      return this.examRequestsService.findAllByAppointment(appointmentId);
+    }
+    return this.examRequestsService.findAll(); // fallback
   }
 
   @Get(':id')
+  @Roles(Role.DOCTOR, Role.ADMIN, Role.LABORATORISTA)
   findOne(@Param('id') id: string) {
     return this.examRequestsService.findOne(id);
   }
@@ -52,7 +58,7 @@ export class ExamRequestsController {
     return this.examRequestsService.remove(id);
   }
 
-    // ======================
+  // ======================
   // PAINEL DO LABORATÓRIO
   // ======================
 

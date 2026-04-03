@@ -5,6 +5,8 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PatientsModule } from './patients/patients.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { ExamTypesModule } from './exam-types/exam-types.module';
+import { ExamRequestsModule } from './exam-requests/exam-requests.module';
 import { MedicationsModule } from './medications/medications.module';
 import { PaymentMethodsModule } from './payment-methods/payment-methods.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -14,8 +16,8 @@ import { PrescriptionsModule } from './prescriptions/prescriptions.module';
 import { BillingModule } from './billing/billing.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { RolesModule } from './roles/roles.module';
-import { ExamTypesModule } from './exam-types/exam-types.module';
-import { ExamRequestsModule } from './exam-requests/exam-requests.module';
+
+
 
 @Module({
   imports: [
@@ -26,9 +28,9 @@ import { ExamRequestsModule } from './exam-requests/exam-requests.module';
     RolesModule,
     PatientsModule,
     AppointmentsModule,
-    MedicationsModule,
     ExamTypesModule,
     ExamRequestsModule,
+    MedicationsModule,
     PaymentMethodsModule,
     DashboardModule,
     TriageModule,

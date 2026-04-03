@@ -7,6 +7,9 @@ import { ExamStatus } from '@prisma/client';
 
 @Injectable()
 export class ExamRequestsService {
+  findAll() {
+    throw new Error('Method not implemented.');
+  }
   constructor(private prisma: PrismaService) {}
 
   // ======================

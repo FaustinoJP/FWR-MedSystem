@@ -15,10 +15,15 @@ export class ExamTypesController {
     return this.examTypesService.create(createExamTypeDto);
   }
 
-  @Get()
+  /*@Get()
   findAll(@Query('active') active?: string) {
     const activeOnly = active !== 'false';
     return this.examTypesService.findAll(activeOnly);
+  }*/
+
+  @Get()
+  findAll() {
+    return this.examTypesService.findAll();
   }
 
   @Get(':id')

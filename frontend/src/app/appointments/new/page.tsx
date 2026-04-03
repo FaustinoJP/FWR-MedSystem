@@ -8,13 +8,6 @@ import { departmentsService } from '@/services/departments.service';
 import { appointmentsService } from '@/services/appointments.service';
 import { staffService } from '@/services/staff.service';
 
-function getLocalDatetimeValue() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  const local = new Date(now.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 16);
-}
-
 export default function NewAppointmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,12 +24,18 @@ export default function NewAppointmentPage() {
     patientId: preselectedPatientId,
     doctorId: '',
     departmentId: '',
-    appointmentDate: getLocalDatetimeValue(),
+    appointmentDate: '',           // ← vamos preencher corretamente
     reason: '',
   });
 
   useEffect(() => {
     load();
+    // Preenche data atual no formato correto
+    const now = new Date();
+    const localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+    setForm((prev) => ({ ...prev, appointmentDate: localISO }));
   }, []);
 
   useEffect(() => {
@@ -51,15 +50,13 @@ export default function NewAppointmentPage() {
       setPatients(Array.isArray(patientsData) ? patientsData : []);
     } catch (err) {
       console.error('ERRO AO CARREGAR PACIENTES:', err);
-      setPatients([]);
     }
 
     try {
       const doctorsData = await staffService.listDoctors();
       setDoctors(Array.isArray(doctorsData) ? doctorsData : []);
     } catch (err) {
-      console.error('ERRO AO CARREGAR MEDICOS:', err);
-      setDoctors([]);
+      console.error('ERRO AO CARREGAR MÉDICOS:', err);
     }
 
     try {
@@ -67,28 +64,30 @@ export default function NewAppointmentPage() {
       setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
     } catch (err) {
       console.error('ERRO AO CARREGAR DEPARTAMENTOS:', err);
-      setDepartments([]);
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
     setSaving(true);
     setMessage('');
 
     try {
+      // Converte para ISO completo antes de enviar
+      const appointmentDateISO = new Date(form.appointmentDate).toISOString();
+
       const result = await appointmentsService.create({
         patientId: form.patientId,
         doctorId: form.doctorId,
         departmentId: form.departmentId,
-        appointmentDate: form.appointmentDate,
+        appointmentDate: appointmentDateISO,   // ← formato correto
         reason: form.reason || undefined,
       });
 
       router.push(`/appointments/${result.id}`);
     } catch (err: any) {
       setMessage(err.message || 'Erro ao agendar consulta');
+      console.error(err);
     } finally {
       setSaving(false);
     }
@@ -105,9 +104,7 @@ export default function NewAppointmentPage() {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
             <Link href="/dashboard">← Dashboard</Link>
             <Link href="/appointments">← Consultas</Link>
-            {form.patientId ? (
-              <Link href={`/patients/${form.patientId}`}>← Paciente</Link>
-            ) : null}
+            {form.patientId && <Link href={`/patients/${form.patientId}`}>← Paciente</Link>}
           </div>
         </div>
 
@@ -115,9 +112,7 @@ export default function NewAppointmentPage() {
           <Field label="Paciente">
             <select
               value={form.patientId}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, patientId: e.target.value }))
-              }
+              onChange={(e) => setForm((p) => ({ ...p, patientId: e.target.value }))}
               style={inputStyle}
               required
             >
@@ -136,7 +131,6 @@ export default function NewAppointmentPage() {
               onChange={(e) => {
                 const doctorId = e.target.value;
                 const doctor = doctors.find((d) => d.id === doctorId);
-
                 setForm((p) => ({
                   ...p,
                   doctorId,
@@ -149,8 +143,7 @@ export default function NewAppointmentPage() {
               <option value="">Selecione o médico</option>
               {doctors.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.name}
-                  {d.department?.name ? ` - ${d.department.name}` : ''}
+                  {d.name} {d.department?.name ? ` - ${d.department.name}` : ''}
                 </option>
               ))}
             </select>
@@ -159,9 +152,7 @@ export default function NewAppointmentPage() {
           <Field label="Departamento">
             <select
               value={form.departmentId}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, departmentId: e.target.value }))
-              }
+              onChange={(e) => setForm((p) => ({ ...p, departmentId: e.target.value }))}
               style={inputStyle}
               required
             >
@@ -178,9 +169,7 @@ export default function NewAppointmentPage() {
             <input
               type="datetime-local"
               value={form.appointmentDate}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, appointmentDate: e.target.value }))
-              }
+              onChange={(e) => setForm((p) => ({ ...p, appointmentDate: e.target.value }))}
               style={inputStyle}
               required
             />
@@ -189,17 +178,13 @@ export default function NewAppointmentPage() {
           <Field label="Motivo">
             <textarea
               value={form.reason}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, reason: e.target.value }))
-              }
+              onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
               style={textareaStyle}
               placeholder="Ex.: consulta de rotina, febre, dor abdominal..."
             />
           </Field>
 
-          {message ? (
-            <p style={{ color: 'red', margin: 0 }}>{message}</p>
-          ) : null}
+          {message && <p style={{ color: 'red', margin: 0 }}>{message}</p>}
 
           <button type="submit" style={buttonStyle} disabled={saving}>
             {saving ? 'A guardar...' : 'Agendar consulta'}
@@ -210,13 +195,8 @@ export default function NewAppointmentPage() {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+// Componentes auxiliares (mantidos iguais)
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: 'grid', gap: 6 }}>
       <strong>{label}</strong>
@@ -225,17 +205,8 @@ function Field({
   );
 }
 
-const pageStyle: React.CSSProperties = {
-  padding: 24,
-};
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: 1000,
-  margin: '0 auto',
-  display: 'grid',
-  gap: 20,
-};
-
+const pageStyle: React.CSSProperties = { padding: 24 };
+const containerStyle: React.CSSProperties = { maxWidth: 1000, margin: '0 auto', display: 'grid', gap: 20 };
 const cardStyle: React.CSSProperties = {
   background: '#fff',
   border: '1px solid #e2e8f0',
@@ -245,25 +216,6 @@ const cardStyle: React.CSSProperties = {
   gap: 16,
   boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)',
 };
-
-const inputStyle: React.CSSProperties = {
-  padding: 12,
-  borderRadius: 10,
-  border: '1px solid #cbd5e1',
-};
-
-const textareaStyle: React.CSSProperties = {
-  padding: 12,
-  borderRadius: 10,
-  border: '1px solid #cbd5e1',
-  minHeight: 100,
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: '12px 16px',
-  borderRadius: 10,
-  border: 0,
-  background: '#0f172a',
-  color: 'white',
-  cursor: 'pointer',
-};
+const inputStyle: React.CSSProperties = { padding: 12, borderRadius: 10, border: '1px solid #cbd5e1' };
+const textareaStyle: React.CSSProperties = { padding: 12, borderRadius: 10, border: '1px solid #cbd5e1', minHeight: 100 };
+const buttonStyle: React.CSSProperties = { padding: '12px 16px', borderRadius: 10, border: 0, background: '#0f172a', color: 'white', cursor: 'pointer' };

@@ -31,4 +31,10 @@ export class AppointmentsController {
   updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.appointmentsService.updateStatus(id, status);
   }
+
+    @Patch(':id/complete')
+  @Roles(Role.DOCTOR, Role.ADMIN)
+  complete(@Param('id') id: string) {
+    return this.appointmentsService.complete(id);
+  }
 }
